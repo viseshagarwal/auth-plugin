@@ -1,121 +1,119 @@
 # Auth Plugin Library
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
+## Overview
 
-A modular authentication library for Python applications, supporting JWT and OAuth2 authentication, with easy integration for multiple databases.
+`auth-plugin` is a Python library designed to streamline the authentication process across different applications. It provides a flexible and extensible framework that supports multiple authentication methods, including JWT and OAuth2, with the ability to connect to various databases.
 
 ## Features
 
-- **JWT Authentication**: Securely manage and validate JSON Web Tokens (JWT).
-- **OAuth2 Authentication**: Easily integrate OAuth2 authentication for your application.
-- **Database Flexibility**: Supports multiple databases, including MongoDB, MySQL, and PostgreSQL.
-- **Modular Design**: Designed as plugins for seamless integration into existing projects.
+- **Pluggable Authentication**: Easily switch between different authentication methods like JWT and OAuth2.
+- **Database Integration**: Connect seamlessly to different databases such as MongoDB, PostgreSQL, and more.
+- **Utility Functions**: Includes helper functions to support common authentication and security tasks.
+- **Extensible**: Easily add new authentication methods or databases.
 
 ## Installation
 
-First, clone the repository:
+To install the library, clone the repository and install the dependencies:
 
 ```bash
 git clone https://github.com/viseshagarwal/auth-plugin.git
 cd auth-plugin
+pip install -e .
 ```
 
-Install the required dependencies:
+Make sure you have all required dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-(Optional) If you want to install the package in editable mode:
-
-```bash
-pip install -e .
-```
-
 ## Usage
 
-### Basic Setup
+### 1. **JWT Authentication**
 
-To use the library, you need to create an instance of the authentication plugin and configure it according to your needs.
-
-#### Example: JWT Authentication
+To use JWT authentication, first import the `JWTAuth` class:
 
 ```python
 from auth_plugin.jwt_auth import JWTAuth
-from auth_plugin.config import Config
 
-config = Config(secret_key="your_secret_key")
-jwt_auth = JWTAuth(config)
-
-# Example usage
-token = jwt_auth.create_token({"user_id": 1})
-print(jwt_auth.verify_token(token))
+jwt_auth = JWTAuth(secret_key="your_secret_key")
+token = jwt_auth.create_token({"user_id": 123})
+is_valid = jwt_auth.verify_token(token)
 ```
 
-#### Example: OAuth2 Authentication
+### 2. **OAuth2 Authentication**
+
+To use OAuth2 authentication, import the `OAuth2Auth` class:
 
 ```python
 from auth_plugin.oauth2_auth import OAuth2Auth
 
 oauth2_auth = OAuth2Auth(client_id="your_client_id", client_secret="your_client_secret")
-
-# Example usage
-auth_url = oauth2_auth.get_authorization_url()
-print(auth_url)
+authorization_url = oauth2_auth.get_authorization_url(redirect_uri="https://yourapp.com/callback")
+token = oauth2_auth.exchange_code_for_token(code="authorization_code", redirect_uri="https://yourapp.com/callback")
 ```
 
-### Database Integration
+### 3. **Database Integration**
 
-You can also connect to various databases using the `DBManager` class.
-
-#### Example: MongoDB Integration
+To connect to a database, use the `DBManager` class:
 
 ```python
 from auth_plugin.db_manager import DBManager
 
-db_manager = DBManager("mongodb", uri="mongodb://localhost:27017", db_name="auth_db")
+db_manager = DBManager(db_type="mongo", db_name="your_db_name", host="localhost", port=27017)
 collection = db_manager.get_collection("users")
+```
 
-# Example usage
-user = collection.find_one({"username": "testuser"})
-print(user)
+### 4. **Utility Functions**
+
+The library also provides various utility functions that can be used across different modules:
+
+```python
+from auth_plugin.utils import hash_password, verify_password
+
+hashed_password = hash_password("your_password")
+is_correct = verify_password("your_password", hashed_password)
 ```
 
 ## Running Tests
 
-To run the unit tests for the library:
+To run the tests, ensure you're in the root directory and use the following command:
 
-1. Ensure that the `auth_plugin` directory is on your `PYTHONPATH`:
+```bash
+PYTHONPATH=. python -m unittest discover -s tests
+```
 
-   ```bash
-   PYTHONPATH=. python -m unittest discover -s tests
-   ```
-
-2. Alternatively, you can run individual test files:
-
-   ```bash
-   python -m unittest tests/test_jwt_auth.py
-   ```
+This will run all the test cases in the `tests` directory.
 
 ## Contributing
 
-Contributions are welcome! Please fork this repository and submit a pull request with your changes. Make sure to include tests for any new functionality you add.
+Contributions are welcome! Please fork the repository, create a new branch, and submit a pull request.
+
+### Steps to Contribute:
+
+1. Fork the repository.
+2. Create a new branch (`git checkout -b feature-branch`).
+3. Commit your changes (`git commit -m 'Add some feature'`).
+4. Push to the branch (`git push origin feature-branch`).
+5. Open a pull request.
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-```
+## Acknowledgments
 
-## Key Sections Explained:
+- This library is inspired by common authentication needs in modern web applications.
+- Special thanks to the contributors who helped improve this project.
 
-1. **Features**: Provides an overview of the capabilities of your library.
-2. **Installation**: Explains how to set up the library, including installing dependencies and installing the package locally in editable mode.
-3. **Usage**: Offers examples for the user on how to integrate the different features of your library into their projects.
-4. **Database Integration**: Demonstrates how to connect to different databases.
-5. **Running Tests**: Instructions for running the unit tests.
-6. **Contributing**: Encourages others to contribute to the project.
-7. **License**: Mentions the licensing terms.
+## Contact
 
-This `README.md` should give users a good starting point to understand, install, and use your library. Feel free to modify the content according to your specific needs!
-```
+If you have any questions or suggestions, feel free to open an issue or reach out to [your email address].
+
+### Customization
+
+- Replace `yourusername` in the Git clone URL with your GitHub username.
+- Replace `"your_secret_key"`, `"your_client_id"`, `"your_client_secret"`, etc., with actual values relevant to your application.
+- Add any additional information that might be specific to your project.
+
+This `README.md` provides a comprehensive guide to using your `auth-plugin` library, including installation, usage, testing, and contribution instructions.
