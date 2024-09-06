@@ -1,4 +1,6 @@
 import unittest
+import sys
+
 from auth_plugin.db_manager import DatabaseManager
 from auth_plugin.config import config
 
