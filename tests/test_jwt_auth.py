@@ -3,11 +3,7 @@ import jwt
 import time
 import os
 import sys
-
-sys.path.append("/home/visesh/Desktop/auth_plugin")
-from auth_plugin.jwt_auth import JWTAuth
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from jwt_auth import JWTAuth
 
 
 class TestJWTAuth(unittest.TestCase):

@@ -1,5 +1,6 @@
 import jwt
 import datetime
+from base_auth import BaseAuth
 
 
 class JWTAuth(BaseAuth):

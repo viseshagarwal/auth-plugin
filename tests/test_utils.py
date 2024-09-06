@@ -1,5 +1,5 @@
 import unittest
-from auth_plugin.utils import extract_token_from_header
+from utils import extract_token_from_header
 
 
 class TestUtils(unittest.TestCase):

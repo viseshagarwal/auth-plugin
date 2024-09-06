@@ -1,8 +1,8 @@
 import unittest
 import sys
 
-from auth_plugin.db_manager import DatabaseManager
-from auth_plugin.config import config
+from db_manager import DatabaseManager
+from config import config
 
 
 class TestDatabaseManager(unittest.TestCase):

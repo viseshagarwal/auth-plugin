@@ -1,5 +1,5 @@
 import unittest
-from auth_plugin.oauth2_auth import OAuth2Auth
+from oauth2_auth import OAuth2Auth
 
 
 class TestOAuth2Auth(unittest.TestCase):
