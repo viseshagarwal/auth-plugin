@@ -1,0 +1,14 @@
+Metadata-Version: 2.1
+Name: auth-plugin
+Version: 0.1.0
+Summary: A simple plugin-based authentication library
+Home-page: https://github.com/viseshagarwal/auth-plugin
+Author: Visesh Agarwal
+Author-email: viseshagarwal@outlook.com
+License: MIT
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Requires-Dist: PyJWT
+Requires-Dist: requests
