@@ -1,5 +1,5 @@
 import requests
-from base_auth import BaseAuth
+from .base_auth import BaseAuth
 
 
 class OAuth2Auth(BaseAuth):

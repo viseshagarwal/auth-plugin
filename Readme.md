@@ -55,13 +55,32 @@ token = oauth2_auth.exchange_code_for_token(code="authorization_code", redirect_
 
 ### 3. **Database Integration**
 
-To connect to a database, use the `DBManager` class:
+#### Connecting to MongoDB
 
 ```python
 from auth_plugin.db_manager import DBManager
 
 db_manager = DBManager(db_type="mongo", db_name="your_db_name", host="localhost", port=27017)
 collection = db_manager.get_collection("users")
+```
+
+#### Connecting to PostgreSQL
+
+```python
+from auth_plugin.db_manager import DBManager
+
+db_manager = DBManager(db_type="postgres", db_name="your_db_name", host="localhost", port=5432, user="your_username", password="your_password")
+db_manager.execute_query("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username VARCHAR(100))")
+```
+
+#### Connecting to MySQL
+
+```python
+from auth_plugin.db_manager import DBManager
+
+db_manager = DBManager(db_type="mysql", db_name="your_db_name", host="localhost", port=3306, user="your_username", password="your_password")
+db_manager.execute_query("CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, username VARCHAR(100))")
+
 ```
 
 ### 4. **Utility Functions**
