@@ -1,2 +1,7 @@
 /venv
 .pyc
+/build
+/dist
+*.db
+*.log
+*.pyc
