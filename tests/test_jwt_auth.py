@@ -3,7 +3,8 @@ import jwt
 import time
 import os
 import sys
-from jwt_auth import JWTAuth
+
+from auth_plugin.jwt_auth import JWTAuth
 
 
 class TestJWTAuth(unittest.TestCase):
