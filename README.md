@@ -105,4 +105,4 @@ Contributions are welcome! If you'd like to contribute to the Auth Plugin librar
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](https://github.com/viseshagarwal/auth-plugin/LICENSE.md) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/viseshagarwal/auth-plugin/blob/main/LICENSE) file for details.
