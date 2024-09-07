@@ -106,14 +106,3 @@ Contributions are welcome! If you'd like to contribute to the Auth Plugin librar
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](https://github.com/viseshagarwal/auth-plugin/LICENSE.md) file for details.
-
-```
-
-### Changes Made:
-- **Improved Formatting**: Added headings for better organization.
-- **Enhanced Instructions**: Expanded usage examples and included more details.
-- **Additional Sections**: Added a section for licensing and a placeholder for it.
-- **Consistent Formatting**: Ensured consistent formatting for code snippets and URLs.
-
-Feel free to adjust any specifics based on your project's requirements.
-```
