@@ -2,13 +2,23 @@ from setuptools import setup, find_packages
 
 setup(
     name="auth-plugin",
-    version="0.2.0",
+    version="0.1.0",  # Update this for new versions
     packages=find_packages(),
-    install_requires=["PyJWT", "requests"],
-    author="Visesh Agarwal",
-    author_email="viseshagarwal@outlook.com",
-    description="A simple plugin-based authentication library",
-    license="MIT",
+    install_requires=[
+        "PyJWT",
+        "pymongo",
+        "SQLAlchemy",
+        "mysql-connector-python",
+        "requests",
+        "cryptography",
+        "certifi",
+        "cffi",
+    ],
+    author="Your Name",
+    author_email="your.email@example.com",
+    description="A robust Python library for JWT, OAuth2, and database authentication.",
+    long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
     url="https://github.com/viseshagarwal/auth-plugin",
     classifiers=[
         "Programming Language :: Python :: 3",
