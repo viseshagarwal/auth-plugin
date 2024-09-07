@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="auth-plugin",
-    version="0.1.0",  # Update this for new versions
+    version="0.3.0",
     packages=find_packages(),
     install_requires=[
         "PyJWT",
@@ -10,12 +10,12 @@ setup(
         "SQLAlchemy",
         "mysql-connector-python",
         "requests",
+        "psycopg2",
         "cryptography",
         "certifi",
         "cffi",
     ],
-    author="Your Name",
-    author_email="your.email@example.com",
+    author="Visesh Agarwal",
     description="A robust Python library for JWT, OAuth2, and database authentication.",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",

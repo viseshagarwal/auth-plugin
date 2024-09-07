@@ -1,9 +1,9 @@
-# db_manager.py
-
 import pymongo
 import psycopg2
 import mysql.connector
 from sqlalchemy import create_engine
+from sqlalchemy.exc import SQLAlchemyError, OperationalError
+import logging
 
 
 class DBManager:
@@ -17,44 +17,72 @@ class DBManager:
         self.user = user
         self.password = password
 
-        if self.db_type == "mongo":
-            self.client = pymongo.MongoClient(host, port)
-            self.db = self.client[db_name]
-        elif self.db_type == "postgres":
-            self.conn = psycopg2.connect(
-                dbname=db_name, user=user, password=password, host=host, port=port
-            )
-            self.cursor = self.conn.cursor()
-        elif self.db_type == "mysql":
-            self.conn = mysql.connector.connect(
-                host=host, user=user, password=password, database=db_name, port=port
-            )
-            self.cursor = self.conn.cursor(dictionary=True)
-        else:
-            raise ValueError("Unsupported database type")
+        try:
+            if self.db_type == "mongo" or self.db_type == "mongodb":
+                self.client = pymongo.MongoClient(host, port)
+                self.db = self.client[db_name]
+                logging.info("Connected to MongoDB database successfully")
+            elif self.db_type == "postgres":
+                self.conn = psycopg2.connect(
+                    dbname=db_name, user=user, password=password, host=host, port=port
+                )
+                self.cursor = self.conn.cursor()
+                logging.info("Connected to PostgreSQL database successfully")
+            elif self.db_type == "mysql":
+                self.conn = mysql.connector.connect(
+                    host=host, user=user, password=password, database=db_name, port=port
+                )
+                self.cursor = self.conn.cursor(dictionary=True)
+                logging.info("Connected to MySQL database successfully")
+            else:
+                raise ValueError("Unsupported database type")
+        except (
+            pymongo.errors.PyMongoError,
+            psycopg2.Error,
+            mysql.connector.Error,
+        ) as e:
+            logging.error(f"Database connection error: {str(e)}")
+            raise RuntimeError(f"Failed to connect to {self.db_type} database")
 
     def get_collection(self, collection_name):
-        if self.db_type == "mongo":
+        if self.db_type == "mongo" or self.db_type == "mongodb":
             return self.db[collection_name]
         else:
             raise ValueError("get_collection is only supported for MongoDB")
 
     def execute_query(self, query, params=None):
         if self.db_type in ["postgres", "mysql"]:
-            self.cursor.execute(query, params)
-            self.conn.commit()
+            try:
+                self.cursor.execute(query, params)
+                self.conn.commit()
+                logging.info("Query executed successfully")
+            except (SQLAlchemyError, OperationalError) as e:
+                logging.error(f"Error executing query: {str(e)}")
+                raise RuntimeError("Query execution failed")
         else:
             raise ValueError("execute_query is only supported for SQL databases")
 
     def fetch_results(self):
         if self.db_type in ["postgres", "mysql"]:
-            return self.cursor.fetchall()
+            try:
+                results = self.cursor.fetchall()
+                logging.info("Results fetched successfully")
+                return results
+            except (SQLAlchemyError, OperationalError) as e:
+                logging.error(f"Error fetching results: {str(e)}")
+                raise RuntimeError("Failed to fetch results")
         else:
             raise ValueError("fetch_results is only supported for SQL databases")
 
     def close(self):
-        if self.db_type in ["postgres", "mysql"]:
-            self.cursor.close()
-            self.conn.close()
-        elif self.db_type == "mongo":
-            self.client.close()
+        try:
+            if self.db_type in ["postgres", "mysql"]:
+                self.cursor.close()
+                self.conn.close()
+                logging.info("SQL database connection closed successfully")
+            elif self.db_type == "mongo" or self.db_type == "mongodb":
+                self.client.close()
+                logging.info("MongoDB connection closed successfully")
+        except (SQLAlchemyError, OperationalError, pymongo.errors.PyMongoError) as e:
+            logging.error(f"Error closing database connection: {str(e)}")
+            raise RuntimeError("Failed to close the database connection")
