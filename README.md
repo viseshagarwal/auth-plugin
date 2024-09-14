@@ -39,30 +39,37 @@ payload = jwt_auth.decode_token(token)
 
 ### Database Management
 
-The DBManager class supports connections to MongoDB, PostgreSQL, and MySQL. Use the appropriate database type when initializing the object.
+The `DBManager` class supports connections to MongoDB, PostgreSQL and MySQL. Use the appropriate database type when initializing the object.
+
+#### MongoDB
 
 ```python
 from auth_plugin.db_manager import DBManager
 
-# MongoDB
 db_manager = DBManager(
-    db_type="mongodb", # or "mongo"
+    db_type="mongodb",  # or "mongo"
     host="localhost",
     port=27017,
     db_name="testdb"
 )
+```
 
-# PostgreSQL
+#### PostgreSQL
+
+```python
 db_manager = DBManager(
-    db_type="postgresql",
+    db_type="postgres",
     user="username",
     password="password",
     host="localhost",
     port=5432,
     db_name="testdb"
 )
+```
 
-# MySQL
+#### MySQL
+
+```python
 db_manager = DBManager(
     db_type="mysql",
     user="username",
@@ -70,6 +77,52 @@ db_manager = DBManager(
     host="localhost",
     db_name="testdb"
 )
+```
+
+### Query Execution for All Supported Databases
+
+The `DBManager` class provides methods for executing queries and fetching results. The behavior is different depending on whether you're using an SQL database (PostgreSQL, MySQL, SQLite) or a NoSQL database like MongoDB.
+
+#### SQL Databases (PostgreSQL, MySQL)
+
+For SQL-based databases (PostgreSQL and MySQL), you can execute SQL queries and fetch results using the following methods:
+
+```python
+# Execute a query (e.g., creating a table)
+db_manager.execute_query("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name VARCHAR(255))")
+
+# Insert data into the table
+db_manager.execute_query("INSERT INTO users (name) VALUES (%s)", ("John Doe",))
+
+# Fetch all results from a table
+db_manager.execute_query("SELECT * FROM users")
+results = db_manager.fetch_results()
+print(results)
+```
+
+#### MongoDB
+
+For MongoDB, you can interact with collections using the `get_collection` method, and perform operations like inserting or querying documents.
+
+```python
+# Get a collection
+collection = db_manager.get_collection("users")
+
+# Insert a document into the collection
+collection.insert_one({"name": "John Doe"})
+
+# Query documents from the collection
+results = collection.find({"name": "John Doe"})
+for doc in results:
+    print(doc)
+```
+
+### Closing the Connection
+
+After executing queries or performing operations, don't forget to close the connection.
+
+```python
+db_manager.close()
 ```
 
 ### OAuth2 Authentication
