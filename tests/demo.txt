@@ -1,0 +1,3825 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.2, pytest-7.3.0, pluggy-1.0.0
+rootdir: /home/visesh/Desktop/auth-plugin
+plugins: django-4.5.2, Faker-26.1.0, anyio-4.4.0, cov-4.0.0
+collected 11 items
+
+test_db_manager.py ......FF.F.                                           [100%]
+
+=================================== FAILURES ===================================
+____________ TestPostgresDBManager.test_postgres_connection_success ____________
+
+self = <sqlalchemy.engine.base.Connection object at 0x7f0a3b4faab0>
+engine = Engine(postgresql://user:***@localhost:5432/test_db), connection = None
+_has_events = None, _allow_revalidate = True, _allow_autobegin = True
+
+    def __init__(
+        self,
+        engine: Engine,
+        connection: Optional[PoolProxiedConnection] = None,
+        _has_events: Optional[bool] = None,
+        _allow_revalidate: bool = True,
+        _allow_autobegin: bool = True,
+    ):
+        """Construct a new Connection."""
+        self.engine = engine
+        self.dialect = dialect = engine.dialect
+    
+        if connection is None:
+            try:
+>               self._dbapi_connection = engine.raw_connection()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/base.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Engine(postgresql://user:***@localhost:5432/test_db)
+
+    def raw_connection(self) -> PoolProxiedConnection:
+        """Return a "raw" DBAPI connection from the connection pool.
+    
+        The returned object is a proxied version of the DBAPI
+        connection object used by the underlying driver in use.
+        The object will have all the same behavior as the real DBAPI
+        connection, except that its ``close()`` method will result in the
+        connection being returned to the pool, rather than being closed
+        for real.
+    
+        This method provides direct DBAPI connection access for
+        special situations when the API provided by
+        :class:`_engine.Connection`
+        is not needed.   When a :class:`_engine.Connection` object is already
+        present, the DBAPI connection is available using
+        the :attr:`_engine.Connection.connection` accessor.
+    
+        .. seealso::
+    
+            :ref:`dbapi_connections`
+    
+        """
+>       return self.pool.connect()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3302: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4fac90>
+
+    def connect(self) -> PoolProxiedConnection:
+        """Return a DBAPI connection from the pool.
+    
+        The connection is instrumented such that when its
+        ``close()`` method is called, the connection will be returned to
+        the pool.
+    
+        """
+>       return _ConnectionFairy._checkout(self)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:449: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'sqlalchemy.pool.base._ConnectionFairy'>
+pool = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4fac90>
+threadconns = None, fairy = None
+
+    @classmethod
+    def _checkout(
+        cls,
+        pool: Pool,
+        threadconns: Optional[threading.local] = None,
+        fairy: Optional[_ConnectionFairy] = None,
+    ) -> _ConnectionFairy:
+        if not fairy:
+>           fairy = _ConnectionRecord.checkout(pool)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1263: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'sqlalchemy.pool.base._ConnectionRecord'>
+pool = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4fac90>
+
+    @classmethod
+    def checkout(cls, pool: Pool) -> _ConnectionFairy:
+        if TYPE_CHECKING:
+            rec = cast(_ConnectionRecord, pool._do_get())
+        else:
+>           rec = pool._do_get()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4fac90>
+
+    def _do_get(self) -> ConnectionPoolEntry:
+        use_overflow = self._max_overflow > -1
+    
+        wait = use_overflow and self._overflow >= self._max_overflow
+        try:
+            return self._pool.get(wait, self._timeout)
+        except sqla_queue.Empty:
+            # don't do things inside of "except Empty", because when we say
+            # we timed out or can't connect and raise, Python 3 tells
+            # people the real error is queue.Empty which it isn't.
+            pass
+        if use_overflow and self._overflow >= self._max_overflow:
+            if not wait:
+                return self._do_get()
+            else:
+                raise exc.TimeoutError(
+                    "QueuePool limit of size %d overflow %d reached, "
+                    "connection timed out, timeout %0.2f"
+                    % (self.size(), self.overflow(), self._timeout),
+                    code="3o7r",
+                )
+    
+        if self._inc_overflow():
+            try:
+                return self._create_connection()
+            except:
+>               with util.safe_reraise():
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:179: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.util.langhelpers.safe_reraise object at 0x7f0a3b4fb010>
+type_ = None, value = None, traceback = None
+
+    def __exit__(
+        self,
+        type_: Optional[Type[BaseException]],
+        value: Optional[BaseException],
+        traceback: Optional[types.TracebackType],
+    ) -> NoReturn:
+        assert self._exc_info is not None
+        # see #2703 for notes
+        if type_ is None:
+            exc_type, exc_value, exc_tb = self._exc_info
+            assert exc_value is not None
+            self._exc_info = None  # remove potential circular references
+>           raise exc_value.with_traceback(exc_tb)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4fac90>
+
+    def _do_get(self) -> ConnectionPoolEntry:
+        use_overflow = self._max_overflow > -1
+    
+        wait = use_overflow and self._overflow >= self._max_overflow
+        try:
+            return self._pool.get(wait, self._timeout)
+        except sqla_queue.Empty:
+            # don't do things inside of "except Empty", because when we say
+            # we timed out or can't connect and raise, Python 3 tells
+            # people the real error is queue.Empty which it isn't.
+            pass
+        if use_overflow and self._overflow >= self._max_overflow:
+            if not wait:
+                return self._do_get()
+            else:
+                raise exc.TimeoutError(
+                    "QueuePool limit of size %d overflow %d reached, "
+                    "connection timed out, timeout %0.2f"
+                    % (self.size(), self.overflow(), self._timeout),
+                    code="3o7r",
+                )
+    
+        if self._inc_overflow():
+            try:
+>               return self._create_connection()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4fac90>
+
+    def _create_connection(self) -> ConnectionPoolEntry:
+        """Called by subclasses to create a new ConnectionRecord."""
+    
+>       return _ConnectionRecord(self)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:390: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3bde7c50>
+pool = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4fac90>, connect = True
+
+    def __init__(self, pool: Pool, connect: bool = True):
+        self.fresh = False
+        self.fairy_ref = None
+        self.starttime = 0
+        self.dbapi_connection = None
+    
+        self.__pool = pool
+        if connect:
+>           self.__connect()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3bde7c50>
+
+    def __connect(self) -> None:
+        pool = self.__pool
+    
+        # ensure any existing connection is removed, so that if
+        # creator fails, this attribute stays None
+        self.dbapi_connection = None
+        try:
+            self.starttime = time.time()
+            self.dbapi_connection = connection = pool._invoke_creator(self)
+            pool.logger.debug("Created new connection %r", connection)
+            self.fresh = True
+        except BaseException as e:
+>           with util.safe_reraise():
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.util.langhelpers.safe_reraise object at 0x7f0a3b4fafe0>
+type_ = None, value = None, traceback = None
+
+    def __exit__(
+        self,
+        type_: Optional[Type[BaseException]],
+        value: Optional[BaseException],
+        traceback: Optional[types.TracebackType],
+    ) -> NoReturn:
+        assert self._exc_info is not None
+        # see #2703 for notes
+        if type_ is None:
+            exc_type, exc_value, exc_tb = self._exc_info
+            assert exc_value is not None
+            self._exc_info = None  # remove potential circular references
+>           raise exc_value.with_traceback(exc_tb)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3bde7c50>
+
+    def __connect(self) -> None:
+        pool = self.__pool
+    
+        # ensure any existing connection is removed, so that if
+        # creator fails, this attribute stays None
+        self.dbapi_connection = None
+        try:
+            self.starttime = time.time()
+>           self.dbapi_connection = connection = pool._invoke_creator(self)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+connection_record = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3bde7c50>
+
+    def connect(
+        connection_record: Optional[ConnectionPoolEntry] = None,
+    ) -> DBAPIConnection:
+        if dialect._has_events:
+            for fn in dialect.dispatch.do_connect:
+                connection = cast(
+                    DBAPIConnection,
+                    fn(dialect, connection_record, cargs, cparams),
+                )
+                if connection is not None:
+                    return connection
+    
+>       return dialect.connect(*cargs, **cparams)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/create.py:643: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.postgresql.psycopg2.PGDialect_psycopg2 object at 0x7f0a3b4faba0>
+cargs = ()
+cparams = {'dbname': 'test_db', 'host': 'localhost', 'password': 'pass', 'port': 5432, ...}
+
+    def connect(self, *cargs, **cparams):
+        # inherits the docstring from interfaces.Dialect.connect
+>       return self.loaded_dbapi.connect(*cargs, **cparams)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/default.py:621: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+dsn = 'host=localhost dbname=test_db user=user password=pass port=5432'
+connection_factory = None, cursor_factory = None
+kwargs = {'dbname': 'test_db', 'host': 'localhost', 'password': 'pass', 'port': 5432, ...}
+kwasync = {}
+
+    def connect(dsn=None, connection_factory=None, cursor_factory=None, **kwargs):
+        """
+        Create a new database connection.
+    
+        The connection parameters can be specified as a string:
+    
+            conn = psycopg2.connect("dbname=test user=postgres password=secret")
+    
+        or using a set of keyword arguments:
+    
+            conn = psycopg2.connect(database="test", user="postgres", password="secret")
+    
+        Or as a mix of both. The basic connection parameters are:
+    
+        - *dbname*: the database name
+        - *database*: the database name (only as keyword argument)
+        - *user*: user name used to authenticate
+        - *password*: password used to authenticate
+        - *host*: database host address (defaults to UNIX socket if not provided)
+        - *port*: connection port number (defaults to 5432 if not provided)
+    
+        Using the *connection_factory* parameter a different class or connections
+        factory can be specified. It should be a callable object taking a dsn
+        argument.
+    
+        Using the *cursor_factory* parameter, a new default cursor factory will be
+        used by cursor().
+    
+        Using *async*=True an asynchronous connection will be created. *async_* is
+        a valid alias (for Python versions where ``async`` is a keyword).
+    
+        Any other keyword parameter will be passed to the underlying client
+        library: the list of supported parameters depends on the library version.
+    
+        """
+        kwasync = {}
+        if 'async' in kwargs:
+            kwasync['async'] = kwargs.pop('async')
+        if 'async_' in kwargs:
+            kwasync['async_'] = kwargs.pop('async_')
+    
+        dsn = _ext.make_dsn(dsn, **kwargs)
+>       conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+E       psycopg2.OperationalError: connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "user"
+
+../../../miniconda3/lib/python3.12/site-packages/psycopg2/__init__.py:122: OperationalError
+
+The above exception was the direct cause of the following exception:
+
+self = <auth_plugin.db_manager.handlers.postgres.PostgresDBManager object at 0x7f0a3b4fa9f0>
+
+    def connect(self) -> None:
+        try:
+            connection_url = (
+                f"postgresql://{self.user}:{self.password}@"
+                f"{self.host}:{self.port}/{self.db_name}"
+            )
+            self.client = create_engine(connection_url)
+>           self.db = self.client.connect()
+
+../auth_plugin/db_manager/handlers/postgres.py:20: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Engine(postgresql://user:***@localhost:5432/test_db)
+
+    def connect(self) -> Connection:
+        """Return a new :class:`_engine.Connection` object.
+    
+        The :class:`_engine.Connection` acts as a Python context manager, so
+        the typical use of this method looks like::
+    
+            with engine.connect() as connection:
+                connection.execute(text("insert into table values ('foo')"))
+                connection.commit()
+    
+        Where above, after the block is completed, the connection is "closed"
+        and its underlying DBAPI resources are returned to the connection pool.
+        This also has the effect of rolling back any transaction that
+        was explicitly begun or was begun via autobegin, and will
+        emit the :meth:`_events.ConnectionEvents.rollback` event if one was
+        started and is still in progress.
+    
+        .. seealso::
+    
+            :meth:`_engine.Engine.begin`
+    
+        """
+    
+>       return self._connection_cls(self)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3278: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.engine.base.Connection object at 0x7f0a3b4faab0>
+engine = Engine(postgresql://user:***@localhost:5432/test_db), connection = None
+_has_events = None, _allow_revalidate = True, _allow_autobegin = True
+
+    def __init__(
+        self,
+        engine: Engine,
+        connection: Optional[PoolProxiedConnection] = None,
+        _has_events: Optional[bool] = None,
+        _allow_revalidate: bool = True,
+        _allow_autobegin: bool = True,
+    ):
+        """Construct a new Connection."""
+        self.engine = engine
+        self.dialect = dialect = engine.dialect
+    
+        if connection is None:
+            try:
+                self._dbapi_connection = engine.raw_connection()
+            except dialect.loaded_dbapi.Error as err:
+>               Connection._handle_dbapi_exception_noconnection(
+                    err, dialect, engine
+                )
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/base.py:148: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'sqlalchemy.engine.base.Connection'>
+e = OperationalError('connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "user"\n')
+dialect = <sqlalchemy.dialects.postgresql.psycopg2.PGDialect_psycopg2 object at 0x7f0a3b4faba0>
+engine = Engine(postgresql://user:***@localhost:5432/test_db)
+is_disconnect = False, invalidate_pool_on_disconnect = True, is_pre_ping = False
+
+    @classmethod
+    def _handle_dbapi_exception_noconnection(
+        cls,
+        e: BaseException,
+        dialect: Dialect,
+        engine: Optional[Engine] = None,
+        is_disconnect: Optional[bool] = None,
+        invalidate_pool_on_disconnect: bool = True,
+        is_pre_ping: bool = False,
+    ) -> NoReturn:
+        exc_info = sys.exc_info()
+    
+        if is_disconnect is None:
+            is_disconnect = isinstance(
+                e, dialect.loaded_dbapi.Error
+            ) and dialect.is_disconnect(e, None, None)
+    
+        should_wrap = isinstance(e, dialect.loaded_dbapi.Error)
+    
+        if should_wrap:
+            sqlalchemy_exception = exc.DBAPIError.instance(
+                None,
+                None,
+                cast(Exception, e),
+                dialect.loaded_dbapi.Error,
+                hide_parameters=(
+                    engine.hide_parameters if engine is not None else False
+                ),
+                connection_invalidated=is_disconnect,
+                dialect=dialect,
+            )
+        else:
+            sqlalchemy_exception = None
+    
+        newraise = None
+    
+        if dialect._has_events:
+            ctx = ExceptionContextImpl(
+                e,
+                sqlalchemy_exception,
+                engine,
+                dialect,
+                None,
+                None,
+                None,
+                None,
+                None,
+                is_disconnect,
+                invalidate_pool_on_disconnect,
+                is_pre_ping,
+            )
+            for fn in dialect.dispatch.handle_error:
+                try:
+                    # handler returns an exception;
+                    # call next handler in a chain
+                    per_fn = fn(ctx)
+                    if per_fn is not None:
+                        ctx.chained_exception = newraise = per_fn
+                except Exception as _raised:
+                    # handler raises an exception - stop processing
+                    newraise = _raised
+                    break
+    
+            if sqlalchemy_exception and is_disconnect != ctx.is_disconnect:
+                sqlalchemy_exception.connection_invalidated = is_disconnect = (
+                    ctx.is_disconnect
+                )
+    
+        if newraise:
+            raise newraise.with_traceback(exc_info[2]) from e
+        elif should_wrap:
+            assert sqlalchemy_exception is not None
+>           raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2442: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.engine.base.Connection object at 0x7f0a3b4faab0>
+engine = Engine(postgresql://user:***@localhost:5432/test_db), connection = None
+_has_events = None, _allow_revalidate = True, _allow_autobegin = True
+
+    def __init__(
+        self,
+        engine: Engine,
+        connection: Optional[PoolProxiedConnection] = None,
+        _has_events: Optional[bool] = None,
+        _allow_revalidate: bool = True,
+        _allow_autobegin: bool = True,
+    ):
+        """Construct a new Connection."""
+        self.engine = engine
+        self.dialect = dialect = engine.dialect
+    
+        if connection is None:
+            try:
+>               self._dbapi_connection = engine.raw_connection()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/base.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Engine(postgresql://user:***@localhost:5432/test_db)
+
+    def raw_connection(self) -> PoolProxiedConnection:
+        """Return a "raw" DBAPI connection from the connection pool.
+    
+        The returned object is a proxied version of the DBAPI
+        connection object used by the underlying driver in use.
+        The object will have all the same behavior as the real DBAPI
+        connection, except that its ``close()`` method will result in the
+        connection being returned to the pool, rather than being closed
+        for real.
+    
+        This method provides direct DBAPI connection access for
+        special situations when the API provided by
+        :class:`_engine.Connection`
+        is not needed.   When a :class:`_engine.Connection` object is already
+        present, the DBAPI connection is available using
+        the :attr:`_engine.Connection.connection` accessor.
+    
+        .. seealso::
+    
+            :ref:`dbapi_connections`
+    
+        """
+>       return self.pool.connect()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3302: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4fac90>
+
+    def connect(self) -> PoolProxiedConnection:
+        """Return a DBAPI connection from the pool.
+    
+        The connection is instrumented such that when its
+        ``close()`` method is called, the connection will be returned to
+        the pool.
+    
+        """
+>       return _ConnectionFairy._checkout(self)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:449: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'sqlalchemy.pool.base._ConnectionFairy'>
+pool = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4fac90>
+threadconns = None, fairy = None
+
+    @classmethod
+    def _checkout(
+        cls,
+        pool: Pool,
+        threadconns: Optional[threading.local] = None,
+        fairy: Optional[_ConnectionFairy] = None,
+    ) -> _ConnectionFairy:
+        if not fairy:
+>           fairy = _ConnectionRecord.checkout(pool)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1263: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'sqlalchemy.pool.base._ConnectionRecord'>
+pool = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4fac90>
+
+    @classmethod
+    def checkout(cls, pool: Pool) -> _ConnectionFairy:
+        if TYPE_CHECKING:
+            rec = cast(_ConnectionRecord, pool._do_get())
+        else:
+>           rec = pool._do_get()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4fac90>
+
+    def _do_get(self) -> ConnectionPoolEntry:
+        use_overflow = self._max_overflow > -1
+    
+        wait = use_overflow and self._overflow >= self._max_overflow
+        try:
+            return self._pool.get(wait, self._timeout)
+        except sqla_queue.Empty:
+            # don't do things inside of "except Empty", because when we say
+            # we timed out or can't connect and raise, Python 3 tells
+            # people the real error is queue.Empty which it isn't.
+            pass
+        if use_overflow and self._overflow >= self._max_overflow:
+            if not wait:
+                return self._do_get()
+            else:
+                raise exc.TimeoutError(
+                    "QueuePool limit of size %d overflow %d reached, "
+                    "connection timed out, timeout %0.2f"
+                    % (self.size(), self.overflow(), self._timeout),
+                    code="3o7r",
+                )
+    
+        if self._inc_overflow():
+            try:
+                return self._create_connection()
+            except:
+>               with util.safe_reraise():
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:179: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.util.langhelpers.safe_reraise object at 0x7f0a3b4fb010>
+type_ = None, value = None, traceback = None
+
+    def __exit__(
+        self,
+        type_: Optional[Type[BaseException]],
+        value: Optional[BaseException],
+        traceback: Optional[types.TracebackType],
+    ) -> NoReturn:
+        assert self._exc_info is not None
+        # see #2703 for notes
+        if type_ is None:
+            exc_type, exc_value, exc_tb = self._exc_info
+            assert exc_value is not None
+            self._exc_info = None  # remove potential circular references
+>           raise exc_value.with_traceback(exc_tb)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4fac90>
+
+    def _do_get(self) -> ConnectionPoolEntry:
+        use_overflow = self._max_overflow > -1
+    
+        wait = use_overflow and self._overflow >= self._max_overflow
+        try:
+            return self._pool.get(wait, self._timeout)
+        except sqla_queue.Empty:
+            # don't do things inside of "except Empty", because when we say
+            # we timed out or can't connect and raise, Python 3 tells
+            # people the real error is queue.Empty which it isn't.
+            pass
+        if use_overflow and self._overflow >= self._max_overflow:
+            if not wait:
+                return self._do_get()
+            else:
+                raise exc.TimeoutError(
+                    "QueuePool limit of size %d overflow %d reached, "
+                    "connection timed out, timeout %0.2f"
+                    % (self.size(), self.overflow(), self._timeout),
+                    code="3o7r",
+                )
+    
+        if self._inc_overflow():
+            try:
+>               return self._create_connection()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4fac90>
+
+    def _create_connection(self) -> ConnectionPoolEntry:
+        """Called by subclasses to create a new ConnectionRecord."""
+    
+>       return _ConnectionRecord(self)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:390: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3bde7c50>
+pool = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4fac90>, connect = True
+
+    def __init__(self, pool: Pool, connect: bool = True):
+        self.fresh = False
+        self.fairy_ref = None
+        self.starttime = 0
+        self.dbapi_connection = None
+    
+        self.__pool = pool
+        if connect:
+>           self.__connect()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3bde7c50>
+
+    def __connect(self) -> None:
+        pool = self.__pool
+    
+        # ensure any existing connection is removed, so that if
+        # creator fails, this attribute stays None
+        self.dbapi_connection = None
+        try:
+            self.starttime = time.time()
+            self.dbapi_connection = connection = pool._invoke_creator(self)
+            pool.logger.debug("Created new connection %r", connection)
+            self.fresh = True
+        except BaseException as e:
+>           with util.safe_reraise():
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.util.langhelpers.safe_reraise object at 0x7f0a3b4fafe0>
+type_ = None, value = None, traceback = None
+
+    def __exit__(
+        self,
+        type_: Optional[Type[BaseException]],
+        value: Optional[BaseException],
+        traceback: Optional[types.TracebackType],
+    ) -> NoReturn:
+        assert self._exc_info is not None
+        # see #2703 for notes
+        if type_ is None:
+            exc_type, exc_value, exc_tb = self._exc_info
+            assert exc_value is not None
+            self._exc_info = None  # remove potential circular references
+>           raise exc_value.with_traceback(exc_tb)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3bde7c50>
+
+    def __connect(self) -> None:
+        pool = self.__pool
+    
+        # ensure any existing connection is removed, so that if
+        # creator fails, this attribute stays None
+        self.dbapi_connection = None
+        try:
+            self.starttime = time.time()
+>           self.dbapi_connection = connection = pool._invoke_creator(self)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+connection_record = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3bde7c50>
+
+    def connect(
+        connection_record: Optional[ConnectionPoolEntry] = None,
+    ) -> DBAPIConnection:
+        if dialect._has_events:
+            for fn in dialect.dispatch.do_connect:
+                connection = cast(
+                    DBAPIConnection,
+                    fn(dialect, connection_record, cargs, cparams),
+                )
+                if connection is not None:
+                    return connection
+    
+>       return dialect.connect(*cargs, **cparams)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/create.py:643: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.postgresql.psycopg2.PGDialect_psycopg2 object at 0x7f0a3b4faba0>
+cargs = ()
+cparams = {'dbname': 'test_db', 'host': 'localhost', 'password': 'pass', 'port': 5432, ...}
+
+    def connect(self, *cargs, **cparams):
+        # inherits the docstring from interfaces.Dialect.connect
+>       return self.loaded_dbapi.connect(*cargs, **cparams)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/default.py:621: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+dsn = 'host=localhost dbname=test_db user=user password=pass port=5432'
+connection_factory = None, cursor_factory = None
+kwargs = {'dbname': 'test_db', 'host': 'localhost', 'password': 'pass', 'port': 5432, ...}
+kwasync = {}
+
+    def connect(dsn=None, connection_factory=None, cursor_factory=None, **kwargs):
+        """
+        Create a new database connection.
+    
+        The connection parameters can be specified as a string:
+    
+            conn = psycopg2.connect("dbname=test user=postgres password=secret")
+    
+        or using a set of keyword arguments:
+    
+            conn = psycopg2.connect(database="test", user="postgres", password="secret")
+    
+        Or as a mix of both. The basic connection parameters are:
+    
+        - *dbname*: the database name
+        - *database*: the database name (only as keyword argument)
+        - *user*: user name used to authenticate
+        - *password*: password used to authenticate
+        - *host*: database host address (defaults to UNIX socket if not provided)
+        - *port*: connection port number (defaults to 5432 if not provided)
+    
+        Using the *connection_factory* parameter a different class or connections
+        factory can be specified. It should be a callable object taking a dsn
+        argument.
+    
+        Using the *cursor_factory* parameter, a new default cursor factory will be
+        used by cursor().
+    
+        Using *async*=True an asynchronous connection will be created. *async_* is
+        a valid alias (for Python versions where ``async`` is a keyword).
+    
+        Any other keyword parameter will be passed to the underlying client
+        library: the list of supported parameters depends on the library version.
+    
+        """
+        kwasync = {}
+        if 'async' in kwargs:
+            kwasync['async'] = kwargs.pop('async')
+        if 'async_' in kwargs:
+            kwasync['async_'] = kwargs.pop('async_')
+    
+        dsn = _ext.make_dsn(dsn, **kwargs)
+>       conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+E       sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "user"
+E       
+E       (Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+../../../miniconda3/lib/python3.12/site-packages/psycopg2/__init__.py:122: OperationalError
+
+During handling of the above exception, another exception occurred:
+
+self = <tests.test_db_manager.TestPostgresDBManager testMethod=test_postgres_connection_success>
+mock_engine = <MagicMock name='create_engine' id='139681921266080'>
+
+    @patch('sqlalchemy.create_engine')
+    def test_postgres_connection_success(self, mock_engine):
+        mock_connection = MagicMock()
+        mock_engine.return_value.connect.return_value = mock_connection
+    
+>       with create_db_manager(
+            db_type="postgresql",
+            db_name="test_db",
+            user="user",
+            password="pass"
+        ) as db:
+
+test_db_manager.py:78: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../auth_plugin/db_manager/__init__.py:36: in create_db_manager
+    return manager_class(**kwargs)
+../auth_plugin/db_manager/handlers/postgres.py:11: in __init__
+    self.connect()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <auth_plugin.db_manager.handlers.postgres.PostgresDBManager object at 0x7f0a3b4fa9f0>
+
+    def connect(self) -> None:
+        try:
+            connection_url = (
+                f"postgresql://{self.user}:{self.password}@"
+                f"{self.host}:{self.port}/{self.db_name}"
+            )
+            self.client = create_engine(connection_url)
+            self.db = self.client.connect()
+            self.ping()
+            self.logger.info("Successfully connected to PostgreSQL")
+    
+        except SQLAlchemyError as e:
+>           raise DBConnectionError(f"PostgreSQL connection failed: {str(e)}")
+E           auth_plugin.db_manager.exceptions.DBConnectionError: PostgreSQL connection failed: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "user"
+E           
+E           (Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+../auth_plugin/db_manager/handlers/postgres.py:25: DBConnectionError
+____________________ TestMySQLManager.test_connection_ping _____________________
+
+self = <mysql.connector.connection_cext.CMySQLConnection object at 0x7f0a3b4b4f80>
+
+    def _open_connection(self) -> None:
+        charset_name = self._character_set.get_info(self._charset_id)[0]
+        # pylint: disable=c-extension-no-member
+        self._cmysql = _mysql_connector.MySQL(
+            buffered=self._buffered,
+            raw=self._raw,
+            charset_name=charset_name,
+            connection_timeout=(self._connection_timeout or 0),
+            use_unicode=self._use_unicode,
+            auth_plugin=self._auth_plugin,
+            plugin_dir=self._plugin_dir,
+        )
+        # pylint: enable=c-extension-no-member
+        if not self.isset_client_flag(ClientFlag.CONNECT_ARGS):
+            self._conn_attrs = {}
+    
+        cnx_kwargs = {
+            "host": self._host,
+            "user": self._user,
+            "password": self._password,
+            "password1": self._password1,
+            "password2": self._password2,
+            "password3": self._password3,
+            "database": self._database,
+            "port": self._port,
+            "client_flags": self._client_flags,
+            "unix_socket": self._unix_socket,
+            "compress": self._compress,
+            "ssl_disabled": True,
+            "conn_attrs": self._conn_attrs,
+            "local_infile": self._allow_local_infile,
+            "load_data_local_dir": self._allow_local_infile_in_path,
+            "oci_config_file": self._oci_config_file,
+            "oci_config_profile": self._oci_config_profile,
+            "webauthn_callback": (
+                import_object(self._webauthn_callback)
+                if isinstance(self._webauthn_callback, str)
+                else self._webauthn_callback
+            ),
+        }
+    
+        tls_versions = self._ssl.get("tls_versions")
+        if tls_versions is not None:
+            tls_versions.sort(reverse=True)  # type: ignore[union-attr]
+            tls_versions = ",".join(tls_versions)
+        if self._ssl.get("tls_ciphersuites") is not None:
+            ssl_ciphersuites = self._ssl.get("tls_ciphersuites")[  # type: ignore[index]
+                0
+            ]
+            tls_ciphersuites = self._ssl.get("tls_ciphersuites")[  # type: ignore[index]
+                1
+            ]
+        else:
+            ssl_ciphersuites = None
+            tls_ciphersuites = None
+        if (
+            tls_versions is not None
+            and "TLSv1.3" in tls_versions
+            and not tls_ciphersuites
+        ):
+            tls_ciphersuites = "TLS_AES_256_GCM_SHA384"
+        if not self._ssl_disabled:
+            cnx_kwargs.update(
+                {
+                    "ssl_ca": self._ssl.get("ca"),
+                    "ssl_cert": self._ssl.get("cert"),
+                    "ssl_key": self._ssl.get("key"),
+                    "ssl_cipher_suites": ssl_ciphersuites,
+                    "tls_versions": tls_versions,
+                    "tls_cipher_suites": tls_ciphersuites,
+                    "ssl_verify_cert": self._ssl.get("verify_cert") or False,
+                    "ssl_verify_identity": self._ssl.get("verify_identity") or False,
+                    "ssl_disabled": self._ssl_disabled,
+                }
+            )
+    
+        if os.name == "nt" and self._auth_plugin_class == "MySQLKerberosAuthPlugin":
+            cnx_kwargs["use_kerberos_gssapi"] = True
+    
+        try:
+>           self._cmysql.connect(**cnx_kwargs)
+E           _mysql_connector.MySQLInterfaceError: Access denied for user 'user'@'localhost' (using password: YES)
+
+../../../miniconda3/lib/python3.12/site-packages/mysql/connector/connection_cext.py:334: MySQLInterfaceError
+
+The above exception was the direct cause of the following exception:
+
+self = <sqlalchemy.engine.base.Connection object at 0x7f0a3b51e270>
+engine = Engine(mysql+mysqlconnector://user:***@localhost:3306/test_db)
+connection = None, _has_events = None, _allow_revalidate = True
+_allow_autobegin = True
+
+    def __init__(
+        self,
+        engine: Engine,
+        connection: Optional[PoolProxiedConnection] = None,
+        _has_events: Optional[bool] = None,
+        _allow_revalidate: bool = True,
+        _allow_autobegin: bool = True,
+    ):
+        """Construct a new Connection."""
+        self.engine = engine
+        self.dialect = dialect = engine.dialect
+    
+        if connection is None:
+            try:
+>               self._dbapi_connection = engine.raw_connection()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/base.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Engine(mysql+mysqlconnector://user:***@localhost:3306/test_db)
+
+    def raw_connection(self) -> PoolProxiedConnection:
+        """Return a "raw" DBAPI connection from the connection pool.
+    
+        The returned object is a proxied version of the DBAPI
+        connection object used by the underlying driver in use.
+        The object will have all the same behavior as the real DBAPI
+        connection, except that its ``close()`` method will result in the
+        connection being returned to the pool, rather than being closed
+        for real.
+    
+        This method provides direct DBAPI connection access for
+        special situations when the API provided by
+        :class:`_engine.Connection`
+        is not needed.   When a :class:`_engine.Connection` object is already
+        present, the DBAPI connection is available using
+        the :attr:`_engine.Connection.connection` accessor.
+    
+        .. seealso::
+    
+            :ref:`dbapi_connections`
+    
+        """
+>       return self.pool.connect()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3302: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b51ee70>
+
+    def connect(self) -> PoolProxiedConnection:
+        """Return a DBAPI connection from the pool.
+    
+        The connection is instrumented such that when its
+        ``close()`` method is called, the connection will be returned to
+        the pool.
+    
+        """
+>       return _ConnectionFairy._checkout(self)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:449: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'sqlalchemy.pool.base._ConnectionFairy'>
+pool = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b51ee70>
+threadconns = None, fairy = None
+
+    @classmethod
+    def _checkout(
+        cls,
+        pool: Pool,
+        threadconns: Optional[threading.local] = None,
+        fairy: Optional[_ConnectionFairy] = None,
+    ) -> _ConnectionFairy:
+        if not fairy:
+>           fairy = _ConnectionRecord.checkout(pool)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1263: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'sqlalchemy.pool.base._ConnectionRecord'>
+pool = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b51ee70>
+
+    @classmethod
+    def checkout(cls, pool: Pool) -> _ConnectionFairy:
+        if TYPE_CHECKING:
+            rec = cast(_ConnectionRecord, pool._do_get())
+        else:
+>           rec = pool._do_get()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b51ee70>
+
+    def _do_get(self) -> ConnectionPoolEntry:
+        use_overflow = self._max_overflow > -1
+    
+        wait = use_overflow and self._overflow >= self._max_overflow
+        try:
+            return self._pool.get(wait, self._timeout)
+        except sqla_queue.Empty:
+            # don't do things inside of "except Empty", because when we say
+            # we timed out or can't connect and raise, Python 3 tells
+            # people the real error is queue.Empty which it isn't.
+            pass
+        if use_overflow and self._overflow >= self._max_overflow:
+            if not wait:
+                return self._do_get()
+            else:
+                raise exc.TimeoutError(
+                    "QueuePool limit of size %d overflow %d reached, "
+                    "connection timed out, timeout %0.2f"
+                    % (self.size(), self.overflow(), self._timeout),
+                    code="3o7r",
+                )
+    
+        if self._inc_overflow():
+            try:
+                return self._create_connection()
+            except:
+>               with util.safe_reraise():
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:179: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.util.langhelpers.safe_reraise object at 0x7f0a3b4b4e50>
+type_ = None, value = None, traceback = None
+
+    def __exit__(
+        self,
+        type_: Optional[Type[BaseException]],
+        value: Optional[BaseException],
+        traceback: Optional[types.TracebackType],
+    ) -> NoReturn:
+        assert self._exc_info is not None
+        # see #2703 for notes
+        if type_ is None:
+            exc_type, exc_value, exc_tb = self._exc_info
+            assert exc_value is not None
+            self._exc_info = None  # remove potential circular references
+>           raise exc_value.with_traceback(exc_tb)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b51ee70>
+
+    def _do_get(self) -> ConnectionPoolEntry:
+        use_overflow = self._max_overflow > -1
+    
+        wait = use_overflow and self._overflow >= self._max_overflow
+        try:
+            return self._pool.get(wait, self._timeout)
+        except sqla_queue.Empty:
+            # don't do things inside of "except Empty", because when we say
+            # we timed out or can't connect and raise, Python 3 tells
+            # people the real error is queue.Empty which it isn't.
+            pass
+        if use_overflow and self._overflow >= self._max_overflow:
+            if not wait:
+                return self._do_get()
+            else:
+                raise exc.TimeoutError(
+                    "QueuePool limit of size %d overflow %d reached, "
+                    "connection timed out, timeout %0.2f"
+                    % (self.size(), self.overflow(), self._timeout),
+                    code="3o7r",
+                )
+    
+        if self._inc_overflow():
+            try:
+>               return self._create_connection()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b51ee70>
+
+    def _create_connection(self) -> ConnectionPoolEntry:
+        """Called by subclasses to create a new ConnectionRecord."""
+    
+>       return _ConnectionRecord(self)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:390: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3b4b2ed0>
+pool = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b51ee70>, connect = True
+
+    def __init__(self, pool: Pool, connect: bool = True):
+        self.fresh = False
+        self.fairy_ref = None
+        self.starttime = 0
+        self.dbapi_connection = None
+    
+        self.__pool = pool
+        if connect:
+>           self.__connect()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3b4b2ed0>
+
+    def __connect(self) -> None:
+        pool = self.__pool
+    
+        # ensure any existing connection is removed, so that if
+        # creator fails, this attribute stays None
+        self.dbapi_connection = None
+        try:
+            self.starttime = time.time()
+            self.dbapi_connection = connection = pool._invoke_creator(self)
+            pool.logger.debug("Created new connection %r", connection)
+            self.fresh = True
+        except BaseException as e:
+>           with util.safe_reraise():
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.util.langhelpers.safe_reraise object at 0x7f0a3d510cd0>
+type_ = None, value = None, traceback = None
+
+    def __exit__(
+        self,
+        type_: Optional[Type[BaseException]],
+        value: Optional[BaseException],
+        traceback: Optional[types.TracebackType],
+    ) -> NoReturn:
+        assert self._exc_info is not None
+        # see #2703 for notes
+        if type_ is None:
+            exc_type, exc_value, exc_tb = self._exc_info
+            assert exc_value is not None
+            self._exc_info = None  # remove potential circular references
+>           raise exc_value.with_traceback(exc_tb)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3b4b2ed0>
+
+    def __connect(self) -> None:
+        pool = self.__pool
+    
+        # ensure any existing connection is removed, so that if
+        # creator fails, this attribute stays None
+        self.dbapi_connection = None
+        try:
+            self.starttime = time.time()
+>           self.dbapi_connection = connection = pool._invoke_creator(self)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+connection_record = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3b4b2ed0>
+
+    def connect(
+        connection_record: Optional[ConnectionPoolEntry] = None,
+    ) -> DBAPIConnection:
+        if dialect._has_events:
+            for fn in dialect.dispatch.do_connect:
+                connection = cast(
+                    DBAPIConnection,
+                    fn(dialect, connection_record, cargs, cparams),
+                )
+                if connection is not None:
+                    return connection
+    
+>       return dialect.connect(*cargs, **cparams)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/create.py:643: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.mysql.mysqlconnector.MySQLDialect_mysqlconnector object at 0x7f0a3b43f710>
+cargs = ()
+cparams = {'buffered': True, 'client_flags': 1286671, 'database': 'test_db', 'host': 'localhost', ...}
+
+    def connect(self, *cargs, **cparams):
+        # inherits the docstring from interfaces.Dialect.connect
+>       return self.loaded_dbapi.connect(*cargs, **cparams)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/default.py:621: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+args = ()
+kwargs = {'buffered': True, 'client_flags': 1286671, 'database': 'test_db', 'host': 'localhost', ...}
+dns_srv = False, use_pure = False
+
+    def connect(
+        *args: Any, **kwargs: Any
+    ) -> Union[PooledMySQLConnection, MySQLConnectionAbstract]:
+        """Creates or gets a MySQL connection object.
+    
+        In its simpliest form, `connect()` will open a connection to a
+        MySQL server and return a `MySQLConnectionAbstract` subclass
+        object such as `MySQLConnection` or `CMySQLConnection`.
+    
+        When any connection pooling arguments are given, for example `pool_name`
+        or `pool_size`, a pool is created or a previously one is used to return
+        a `PooledMySQLConnection`.
+    
+        Args:
+            *args: N/A.
+            **kwargs: For a complete list of possible arguments, see [1]. If no arguments
+                      are given, it uses the already configured or default values.
+    
+        Returns:
+            A `MySQLConnectionAbstract` subclass instance (such as `MySQLConnection` or
+            `CMySQLConnection`) or a `PooledMySQLConnection` instance.
+    
+        Examples:
+            A connection with the MySQL server can be established using either the
+            `mysql.connector.connect()` method or a `MySQLConnectionAbstract` subclass:
+            ```
+            >>> from mysql.connector import MySQLConnection, HAVE_CEXT
+            >>>
+            >>> cnx1 = mysql.connector.connect(user='joe', database='test')
+            >>> cnx2 = MySQLConnection(user='joe', database='test')
+            >>>
+            >>> cnx3 = None
+            >>> if HAVE_CEXT:
+            >>>     from mysql.connector import CMySQLConnection
+            >>>     cnx3 = CMySQLConnection(user='joe', database='test')
+            ```
+    
+        References:
+            [1]: https://dev.mysql.com/doc/connector-python/en/connector-python-connectargs.html
+        """
+        # DNS SRV
+        dns_srv = kwargs.pop("dns_srv") if "dns_srv" in kwargs else False
+    
+        if not isinstance(dns_srv, bool):
+            raise InterfaceError("The value of 'dns-srv' must be a boolean")
+    
+        if dns_srv:
+            if not HAVE_DNSPYTHON:
+                raise InterfaceError(
+                    "MySQL host configuration requested DNS "
+                    "SRV. This requires the Python dnspython "
+                    "module. Please refer to documentation"
+                )
+            if "unix_socket" in kwargs:
+                raise InterfaceError(
+                    "Using Unix domain sockets with DNS SRV lookup is not allowed"
+                )
+            if "port" in kwargs:
+                raise InterfaceError(
+                    "Specifying a port number with DNS SRV lookup is not allowed"
+                )
+            if "failover" in kwargs:
+                raise InterfaceError(
+                    "Specifying multiple hostnames with DNS SRV look up is not allowed"
+                )
+            if "host" not in kwargs:
+                kwargs["host"] = DEFAULT_CONFIGURATION["host"]
+    
+            try:
+                srv_records = dns.resolver.query(kwargs["host"], "SRV")
+            except dns.exception.DNSException:
+                raise InterfaceError(
+                    f"Unable to locate any hosts for '{kwargs['host']}'"
+                ) from None
+    
+            failover = []
+            for srv in srv_records:
+                failover.append(
+                    {
+                        "host": srv.target.to_text(omit_final_dot=True),
+                        "port": srv.port,
+                        "priority": srv.priority,
+                        "weight": srv.weight,
+                    }
+                )
+    
+            failover.sort(key=lambda x: (x["priority"], -x["weight"]))
+            kwargs["failover"] = [
+                {"host": srv["host"], "port": srv["port"]} for srv in failover
+            ]
+    
+        # Option files
+        if "read_default_file" in kwargs:
+            kwargs["option_files"] = kwargs["read_default_file"]
+            kwargs.pop("read_default_file")
+    
+        if "option_files" in kwargs:
+            new_config = read_option_files(**kwargs)
+            return connect(**new_config)
+    
+        # Failover
+        if "failover" in kwargs:
+            return _get_failover_connection(**kwargs)
+    
+        # Pooled connections
+        try:
+            if any(key in kwargs for key in CNX_POOL_ARGS):
+                return _get_pooled_connection(**kwargs)
+        except NameError:
+            # No pooling
+            pass
+    
+        # Use C Extension by default
+        use_pure = kwargs.get("use_pure", False)
+        if "use_pure" in kwargs:
+            del kwargs["use_pure"]  # Remove 'use_pure' from kwargs
+            if not use_pure and CMySQLConnection is None:
+                raise ImportError(ERROR_NO_CEXT)
+    
+        if CMySQLConnection and not use_pure:
+>           return CMySQLConnection(*args, **kwargs)
+
+../../../miniconda3/lib/python3.12/site-packages/mysql/connector/pooling.py:322: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.connection_cext.CMySQLConnection object at 0x7f0a3b4b4f80>
+kwargs = {'buffered': True, 'client_flags': 1286671, 'database': 'test_db', 'host': 'localhost', ...}
+
+    def __init__(self, **kwargs: Any) -> None:
+        """Initialization"""
+        if not HAVE_CMYSQL:
+            raise RuntimeError("MySQL Connector/Python C Extension not available")
+        self._cmysql: Optional[
+            _mysql_connector.MySQL  # pylint: disable=c-extension-no-member
+        ] = None
+        self._columns: List[DescriptionType] = []
+        self._plugin_dir: str = os.path.join(
+            os.path.dirname(os.path.abspath(_mysql_connector.__file__)),
+            "mysql",
+            "vendor",
+            "plugin",
+        )
+        if platform.system() == "Linux":
+            # Use the authentication plugins from system if they aren't bundled
+            if not os.path.exists(self._plugin_dir):
+                self._plugin_dir = (
+                    "/usr/lib64/mysql/plugin"
+                    if os.path.exists("/usr/lib64/mysql/plugin")
+                    else "/usr/lib/mysql/plugin"
+                )
+    
+        self.converter: Optional[MySQLConverter] = None
+        super().__init__()
+    
+        if kwargs:
+            try:
+>               self.connect(**kwargs)
+
+../../../miniconda3/lib/python3.12/site-packages/mysql/connector/connection_cext.py:151: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.connection_cext.CMySQLConnection object at 0x7f0a3b4b4f80>
+kwargs = {'buffered': True, 'client_flags': 1286671, 'database': 'test_db', 'host': 'localhost', ...}
+
+    def connect(self, **kwargs: Any) -> None:
+        """Connects to the MySQL server.
+    
+        This method sets up the connection to the MySQL server. If no
+        arguments are given, it will use the already configured or default
+        values.
+    
+        Args:
+            **kwargs: For a complete list of possible arguments, see [1].
+    
+        Examples:
+            ```
+            >>> cnx = MySQLConnection(user='joe', database='test')
+            ```
+    
+        References:
+            [1]: https://dev.mysql.com/doc/connector-python/en/connector-python-connectargs.html
+        """
+        # open connection using the default charset id
+        if kwargs:
+            self.config(**kwargs)
+    
+        self.disconnect()
+>       self._open_connection()
+
+../../../miniconda3/lib/python3.12/site-packages/mysql/connector/abstracts.py:1399: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.connection_cext.CMySQLConnection object at 0x7f0a3b4b4f80>
+
+    def _open_connection(self) -> None:
+        charset_name = self._character_set.get_info(self._charset_id)[0]
+        # pylint: disable=c-extension-no-member
+        self._cmysql = _mysql_connector.MySQL(
+            buffered=self._buffered,
+            raw=self._raw,
+            charset_name=charset_name,
+            connection_timeout=(self._connection_timeout or 0),
+            use_unicode=self._use_unicode,
+            auth_plugin=self._auth_plugin,
+            plugin_dir=self._plugin_dir,
+        )
+        # pylint: enable=c-extension-no-member
+        if not self.isset_client_flag(ClientFlag.CONNECT_ARGS):
+            self._conn_attrs = {}
+    
+        cnx_kwargs = {
+            "host": self._host,
+            "user": self._user,
+            "password": self._password,
+            "password1": self._password1,
+            "password2": self._password2,
+            "password3": self._password3,
+            "database": self._database,
+            "port": self._port,
+            "client_flags": self._client_flags,
+            "unix_socket": self._unix_socket,
+            "compress": self._compress,
+            "ssl_disabled": True,
+            "conn_attrs": self._conn_attrs,
+            "local_infile": self._allow_local_infile,
+            "load_data_local_dir": self._allow_local_infile_in_path,
+            "oci_config_file": self._oci_config_file,
+            "oci_config_profile": self._oci_config_profile,
+            "webauthn_callback": (
+                import_object(self._webauthn_callback)
+                if isinstance(self._webauthn_callback, str)
+                else self._webauthn_callback
+            ),
+        }
+    
+        tls_versions = self._ssl.get("tls_versions")
+        if tls_versions is not None:
+            tls_versions.sort(reverse=True)  # type: ignore[union-attr]
+            tls_versions = ",".join(tls_versions)
+        if self._ssl.get("tls_ciphersuites") is not None:
+            ssl_ciphersuites = self._ssl.get("tls_ciphersuites")[  # type: ignore[index]
+                0
+            ]
+            tls_ciphersuites = self._ssl.get("tls_ciphersuites")[  # type: ignore[index]
+                1
+            ]
+        else:
+            ssl_ciphersuites = None
+            tls_ciphersuites = None
+        if (
+            tls_versions is not None
+            and "TLSv1.3" in tls_versions
+            and not tls_ciphersuites
+        ):
+            tls_ciphersuites = "TLS_AES_256_GCM_SHA384"
+        if not self._ssl_disabled:
+            cnx_kwargs.update(
+                {
+                    "ssl_ca": self._ssl.get("ca"),
+                    "ssl_cert": self._ssl.get("cert"),
+                    "ssl_key": self._ssl.get("key"),
+                    "ssl_cipher_suites": ssl_ciphersuites,
+                    "tls_versions": tls_versions,
+                    "tls_cipher_suites": tls_ciphersuites,
+                    "ssl_verify_cert": self._ssl.get("verify_cert") or False,
+                    "ssl_verify_identity": self._ssl.get("verify_identity") or False,
+                    "ssl_disabled": self._ssl_disabled,
+                }
+            )
+    
+        if os.name == "nt" and self._auth_plugin_class == "MySQLKerberosAuthPlugin":
+            cnx_kwargs["use_kerberos_gssapi"] = True
+    
+        try:
+            self._cmysql.connect(**cnx_kwargs)
+            self._cmysql.converter_str_fallback = self._converter_str_fallback
+            if self.converter:
+                self.converter.str_fallback = self._converter_str_fallback
+        except MySQLInterfaceError as err:
+>           raise get_mysql_exception(
+                msg=err.msg, errno=err.errno, sqlstate=err.sqlstate
+            ) from err
+E           mysql.connector.errors.ProgrammingError: 1045 (28000): Access denied for user 'user'@'localhost' (using password: YES)
+
+../../../miniconda3/lib/python3.12/site-packages/mysql/connector/connection_cext.py:339: ProgrammingError
+
+The above exception was the direct cause of the following exception:
+
+self = <auth_plugin.db_manager.handlers.mysql.MySQLManager object at 0x7f0a3b51e180>
+
+    def connect(self) -> None:
+        try:
+            connection_url = (
+                f"mysql+mysqlconnector://{self.user}:{self.password}@"
+                f"{self.host}:{self.port}/{self.db_name}"
+            )
+            self.client = create_engine(connection_url)
+>           self.db = self.client.connect()
+
+../auth_plugin/db_manager/handlers/mysql.py:23: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Engine(mysql+mysqlconnector://user:***@localhost:3306/test_db)
+
+    def connect(self) -> Connection:
+        """Return a new :class:`_engine.Connection` object.
+    
+        The :class:`_engine.Connection` acts as a Python context manager, so
+        the typical use of this method looks like::
+    
+            with engine.connect() as connection:
+                connection.execute(text("insert into table values ('foo')"))
+                connection.commit()
+    
+        Where above, after the block is completed, the connection is "closed"
+        and its underlying DBAPI resources are returned to the connection pool.
+        This also has the effect of rolling back any transaction that
+        was explicitly begun or was begun via autobegin, and will
+        emit the :meth:`_events.ConnectionEvents.rollback` event if one was
+        started and is still in progress.
+    
+        .. seealso::
+    
+            :meth:`_engine.Engine.begin`
+    
+        """
+    
+>       return self._connection_cls(self)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3278: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.engine.base.Connection object at 0x7f0a3b51e270>
+engine = Engine(mysql+mysqlconnector://user:***@localhost:3306/test_db)
+connection = None, _has_events = None, _allow_revalidate = True
+_allow_autobegin = True
+
+    def __init__(
+        self,
+        engine: Engine,
+        connection: Optional[PoolProxiedConnection] = None,
+        _has_events: Optional[bool] = None,
+        _allow_revalidate: bool = True,
+        _allow_autobegin: bool = True,
+    ):
+        """Construct a new Connection."""
+        self.engine = engine
+        self.dialect = dialect = engine.dialect
+    
+        if connection is None:
+            try:
+                self._dbapi_connection = engine.raw_connection()
+            except dialect.loaded_dbapi.Error as err:
+>               Connection._handle_dbapi_exception_noconnection(
+                    err, dialect, engine
+                )
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/base.py:148: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'sqlalchemy.engine.base.Connection'>
+e = ProgrammingError(1045, "1045 (28000): Access denied for user 'user'@'localhost' (using password: YES)", '28000')
+dialect = <sqlalchemy.dialects.mysql.mysqlconnector.MySQLDialect_mysqlconnector object at 0x7f0a3b43f710>
+engine = Engine(mysql+mysqlconnector://user:***@localhost:3306/test_db)
+is_disconnect = False, invalidate_pool_on_disconnect = True, is_pre_ping = False
+
+    @classmethod
+    def _handle_dbapi_exception_noconnection(
+        cls,
+        e: BaseException,
+        dialect: Dialect,
+        engine: Optional[Engine] = None,
+        is_disconnect: Optional[bool] = None,
+        invalidate_pool_on_disconnect: bool = True,
+        is_pre_ping: bool = False,
+    ) -> NoReturn:
+        exc_info = sys.exc_info()
+    
+        if is_disconnect is None:
+            is_disconnect = isinstance(
+                e, dialect.loaded_dbapi.Error
+            ) and dialect.is_disconnect(e, None, None)
+    
+        should_wrap = isinstance(e, dialect.loaded_dbapi.Error)
+    
+        if should_wrap:
+            sqlalchemy_exception = exc.DBAPIError.instance(
+                None,
+                None,
+                cast(Exception, e),
+                dialect.loaded_dbapi.Error,
+                hide_parameters=(
+                    engine.hide_parameters if engine is not None else False
+                ),
+                connection_invalidated=is_disconnect,
+                dialect=dialect,
+            )
+        else:
+            sqlalchemy_exception = None
+    
+        newraise = None
+    
+        if dialect._has_events:
+            ctx = ExceptionContextImpl(
+                e,
+                sqlalchemy_exception,
+                engine,
+                dialect,
+                None,
+                None,
+                None,
+                None,
+                None,
+                is_disconnect,
+                invalidate_pool_on_disconnect,
+                is_pre_ping,
+            )
+            for fn in dialect.dispatch.handle_error:
+                try:
+                    # handler returns an exception;
+                    # call next handler in a chain
+                    per_fn = fn(ctx)
+                    if per_fn is not None:
+                        ctx.chained_exception = newraise = per_fn
+                except Exception as _raised:
+                    # handler raises an exception - stop processing
+                    newraise = _raised
+                    break
+    
+            if sqlalchemy_exception and is_disconnect != ctx.is_disconnect:
+                sqlalchemy_exception.connection_invalidated = is_disconnect = (
+                    ctx.is_disconnect
+                )
+    
+        if newraise:
+            raise newraise.with_traceback(exc_info[2]) from e
+        elif should_wrap:
+            assert sqlalchemy_exception is not None
+>           raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2442: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.engine.base.Connection object at 0x7f0a3b51e270>
+engine = Engine(mysql+mysqlconnector://user:***@localhost:3306/test_db)
+connection = None, _has_events = None, _allow_revalidate = True
+_allow_autobegin = True
+
+    def __init__(
+        self,
+        engine: Engine,
+        connection: Optional[PoolProxiedConnection] = None,
+        _has_events: Optional[bool] = None,
+        _allow_revalidate: bool = True,
+        _allow_autobegin: bool = True,
+    ):
+        """Construct a new Connection."""
+        self.engine = engine
+        self.dialect = dialect = engine.dialect
+    
+        if connection is None:
+            try:
+>               self._dbapi_connection = engine.raw_connection()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/base.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Engine(mysql+mysqlconnector://user:***@localhost:3306/test_db)
+
+    def raw_connection(self) -> PoolProxiedConnection:
+        """Return a "raw" DBAPI connection from the connection pool.
+    
+        The returned object is a proxied version of the DBAPI
+        connection object used by the underlying driver in use.
+        The object will have all the same behavior as the real DBAPI
+        connection, except that its ``close()`` method will result in the
+        connection being returned to the pool, rather than being closed
+        for real.
+    
+        This method provides direct DBAPI connection access for
+        special situations when the API provided by
+        :class:`_engine.Connection`
+        is not needed.   When a :class:`_engine.Connection` object is already
+        present, the DBAPI connection is available using
+        the :attr:`_engine.Connection.connection` accessor.
+    
+        .. seealso::
+    
+            :ref:`dbapi_connections`
+    
+        """
+>       return self.pool.connect()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3302: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b51ee70>
+
+    def connect(self) -> PoolProxiedConnection:
+        """Return a DBAPI connection from the pool.
+    
+        The connection is instrumented such that when its
+        ``close()`` method is called, the connection will be returned to
+        the pool.
+    
+        """
+>       return _ConnectionFairy._checkout(self)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:449: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'sqlalchemy.pool.base._ConnectionFairy'>
+pool = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b51ee70>
+threadconns = None, fairy = None
+
+    @classmethod
+    def _checkout(
+        cls,
+        pool: Pool,
+        threadconns: Optional[threading.local] = None,
+        fairy: Optional[_ConnectionFairy] = None,
+    ) -> _ConnectionFairy:
+        if not fairy:
+>           fairy = _ConnectionRecord.checkout(pool)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1263: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'sqlalchemy.pool.base._ConnectionRecord'>
+pool = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b51ee70>
+
+    @classmethod
+    def checkout(cls, pool: Pool) -> _ConnectionFairy:
+        if TYPE_CHECKING:
+            rec = cast(_ConnectionRecord, pool._do_get())
+        else:
+>           rec = pool._do_get()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b51ee70>
+
+    def _do_get(self) -> ConnectionPoolEntry:
+        use_overflow = self._max_overflow > -1
+    
+        wait = use_overflow and self._overflow >= self._max_overflow
+        try:
+            return self._pool.get(wait, self._timeout)
+        except sqla_queue.Empty:
+            # don't do things inside of "except Empty", because when we say
+            # we timed out or can't connect and raise, Python 3 tells
+            # people the real error is queue.Empty which it isn't.
+            pass
+        if use_overflow and self._overflow >= self._max_overflow:
+            if not wait:
+                return self._do_get()
+            else:
+                raise exc.TimeoutError(
+                    "QueuePool limit of size %d overflow %d reached, "
+                    "connection timed out, timeout %0.2f"
+                    % (self.size(), self.overflow(), self._timeout),
+                    code="3o7r",
+                )
+    
+        if self._inc_overflow():
+            try:
+                return self._create_connection()
+            except:
+>               with util.safe_reraise():
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:179: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.util.langhelpers.safe_reraise object at 0x7f0a3b4b4e50>
+type_ = None, value = None, traceback = None
+
+    def __exit__(
+        self,
+        type_: Optional[Type[BaseException]],
+        value: Optional[BaseException],
+        traceback: Optional[types.TracebackType],
+    ) -> NoReturn:
+        assert self._exc_info is not None
+        # see #2703 for notes
+        if type_ is None:
+            exc_type, exc_value, exc_tb = self._exc_info
+            assert exc_value is not None
+            self._exc_info = None  # remove potential circular references
+>           raise exc_value.with_traceback(exc_tb)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b51ee70>
+
+    def _do_get(self) -> ConnectionPoolEntry:
+        use_overflow = self._max_overflow > -1
+    
+        wait = use_overflow and self._overflow >= self._max_overflow
+        try:
+            return self._pool.get(wait, self._timeout)
+        except sqla_queue.Empty:
+            # don't do things inside of "except Empty", because when we say
+            # we timed out or can't connect and raise, Python 3 tells
+            # people the real error is queue.Empty which it isn't.
+            pass
+        if use_overflow and self._overflow >= self._max_overflow:
+            if not wait:
+                return self._do_get()
+            else:
+                raise exc.TimeoutError(
+                    "QueuePool limit of size %d overflow %d reached, "
+                    "connection timed out, timeout %0.2f"
+                    % (self.size(), self.overflow(), self._timeout),
+                    code="3o7r",
+                )
+    
+        if self._inc_overflow():
+            try:
+>               return self._create_connection()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b51ee70>
+
+    def _create_connection(self) -> ConnectionPoolEntry:
+        """Called by subclasses to create a new ConnectionRecord."""
+    
+>       return _ConnectionRecord(self)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:390: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3b4b2ed0>
+pool = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b51ee70>, connect = True
+
+    def __init__(self, pool: Pool, connect: bool = True):
+        self.fresh = False
+        self.fairy_ref = None
+        self.starttime = 0
+        self.dbapi_connection = None
+    
+        self.__pool = pool
+        if connect:
+>           self.__connect()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3b4b2ed0>
+
+    def __connect(self) -> None:
+        pool = self.__pool
+    
+        # ensure any existing connection is removed, so that if
+        # creator fails, this attribute stays None
+        self.dbapi_connection = None
+        try:
+            self.starttime = time.time()
+            self.dbapi_connection = connection = pool._invoke_creator(self)
+            pool.logger.debug("Created new connection %r", connection)
+            self.fresh = True
+        except BaseException as e:
+>           with util.safe_reraise():
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.util.langhelpers.safe_reraise object at 0x7f0a3d510cd0>
+type_ = None, value = None, traceback = None
+
+    def __exit__(
+        self,
+        type_: Optional[Type[BaseException]],
+        value: Optional[BaseException],
+        traceback: Optional[types.TracebackType],
+    ) -> NoReturn:
+        assert self._exc_info is not None
+        # see #2703 for notes
+        if type_ is None:
+            exc_type, exc_value, exc_tb = self._exc_info
+            assert exc_value is not None
+            self._exc_info = None  # remove potential circular references
+>           raise exc_value.with_traceback(exc_tb)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3b4b2ed0>
+
+    def __connect(self) -> None:
+        pool = self.__pool
+    
+        # ensure any existing connection is removed, so that if
+        # creator fails, this attribute stays None
+        self.dbapi_connection = None
+        try:
+            self.starttime = time.time()
+>           self.dbapi_connection = connection = pool._invoke_creator(self)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+connection_record = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3b4b2ed0>
+
+    def connect(
+        connection_record: Optional[ConnectionPoolEntry] = None,
+    ) -> DBAPIConnection:
+        if dialect._has_events:
+            for fn in dialect.dispatch.do_connect:
+                connection = cast(
+                    DBAPIConnection,
+                    fn(dialect, connection_record, cargs, cparams),
+                )
+                if connection is not None:
+                    return connection
+    
+>       return dialect.connect(*cargs, **cparams)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/create.py:643: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.mysql.mysqlconnector.MySQLDialect_mysqlconnector object at 0x7f0a3b43f710>
+cargs = ()
+cparams = {'buffered': True, 'client_flags': 1286671, 'database': 'test_db', 'host': 'localhost', ...}
+
+    def connect(self, *cargs, **cparams):
+        # inherits the docstring from interfaces.Dialect.connect
+>       return self.loaded_dbapi.connect(*cargs, **cparams)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/default.py:621: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+args = ()
+kwargs = {'buffered': True, 'client_flags': 1286671, 'database': 'test_db', 'host': 'localhost', ...}
+dns_srv = False, use_pure = False
+
+    def connect(
+        *args: Any, **kwargs: Any
+    ) -> Union[PooledMySQLConnection, MySQLConnectionAbstract]:
+        """Creates or gets a MySQL connection object.
+    
+        In its simpliest form, `connect()` will open a connection to a
+        MySQL server and return a `MySQLConnectionAbstract` subclass
+        object such as `MySQLConnection` or `CMySQLConnection`.
+    
+        When any connection pooling arguments are given, for example `pool_name`
+        or `pool_size`, a pool is created or a previously one is used to return
+        a `PooledMySQLConnection`.
+    
+        Args:
+            *args: N/A.
+            **kwargs: For a complete list of possible arguments, see [1]. If no arguments
+                      are given, it uses the already configured or default values.
+    
+        Returns:
+            A `MySQLConnectionAbstract` subclass instance (such as `MySQLConnection` or
+            `CMySQLConnection`) or a `PooledMySQLConnection` instance.
+    
+        Examples:
+            A connection with the MySQL server can be established using either the
+            `mysql.connector.connect()` method or a `MySQLConnectionAbstract` subclass:
+            ```
+            >>> from mysql.connector import MySQLConnection, HAVE_CEXT
+            >>>
+            >>> cnx1 = mysql.connector.connect(user='joe', database='test')
+            >>> cnx2 = MySQLConnection(user='joe', database='test')
+            >>>
+            >>> cnx3 = None
+            >>> if HAVE_CEXT:
+            >>>     from mysql.connector import CMySQLConnection
+            >>>     cnx3 = CMySQLConnection(user='joe', database='test')
+            ```
+    
+        References:
+            [1]: https://dev.mysql.com/doc/connector-python/en/connector-python-connectargs.html
+        """
+        # DNS SRV
+        dns_srv = kwargs.pop("dns_srv") if "dns_srv" in kwargs else False
+    
+        if not isinstance(dns_srv, bool):
+            raise InterfaceError("The value of 'dns-srv' must be a boolean")
+    
+        if dns_srv:
+            if not HAVE_DNSPYTHON:
+                raise InterfaceError(
+                    "MySQL host configuration requested DNS "
+                    "SRV. This requires the Python dnspython "
+                    "module. Please refer to documentation"
+                )
+            if "unix_socket" in kwargs:
+                raise InterfaceError(
+                    "Using Unix domain sockets with DNS SRV lookup is not allowed"
+                )
+            if "port" in kwargs:
+                raise InterfaceError(
+                    "Specifying a port number with DNS SRV lookup is not allowed"
+                )
+            if "failover" in kwargs:
+                raise InterfaceError(
+                    "Specifying multiple hostnames with DNS SRV look up is not allowed"
+                )
+            if "host" not in kwargs:
+                kwargs["host"] = DEFAULT_CONFIGURATION["host"]
+    
+            try:
+                srv_records = dns.resolver.query(kwargs["host"], "SRV")
+            except dns.exception.DNSException:
+                raise InterfaceError(
+                    f"Unable to locate any hosts for '{kwargs['host']}'"
+                ) from None
+    
+            failover = []
+            for srv in srv_records:
+                failover.append(
+                    {
+                        "host": srv.target.to_text(omit_final_dot=True),
+                        "port": srv.port,
+                        "priority": srv.priority,
+                        "weight": srv.weight,
+                    }
+                )
+    
+            failover.sort(key=lambda x: (x["priority"], -x["weight"]))
+            kwargs["failover"] = [
+                {"host": srv["host"], "port": srv["port"]} for srv in failover
+            ]
+    
+        # Option files
+        if "read_default_file" in kwargs:
+            kwargs["option_files"] = kwargs["read_default_file"]
+            kwargs.pop("read_default_file")
+    
+        if "option_files" in kwargs:
+            new_config = read_option_files(**kwargs)
+            return connect(**new_config)
+    
+        # Failover
+        if "failover" in kwargs:
+            return _get_failover_connection(**kwargs)
+    
+        # Pooled connections
+        try:
+            if any(key in kwargs for key in CNX_POOL_ARGS):
+                return _get_pooled_connection(**kwargs)
+        except NameError:
+            # No pooling
+            pass
+    
+        # Use C Extension by default
+        use_pure = kwargs.get("use_pure", False)
+        if "use_pure" in kwargs:
+            del kwargs["use_pure"]  # Remove 'use_pure' from kwargs
+            if not use_pure and CMySQLConnection is None:
+                raise ImportError(ERROR_NO_CEXT)
+    
+        if CMySQLConnection and not use_pure:
+>           return CMySQLConnection(*args, **kwargs)
+
+../../../miniconda3/lib/python3.12/site-packages/mysql/connector/pooling.py:322: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.connection_cext.CMySQLConnection object at 0x7f0a3b4b4f80>
+kwargs = {'buffered': True, 'client_flags': 1286671, 'database': 'test_db', 'host': 'localhost', ...}
+
+    def __init__(self, **kwargs: Any) -> None:
+        """Initialization"""
+        if not HAVE_CMYSQL:
+            raise RuntimeError("MySQL Connector/Python C Extension not available")
+        self._cmysql: Optional[
+            _mysql_connector.MySQL  # pylint: disable=c-extension-no-member
+        ] = None
+        self._columns: List[DescriptionType] = []
+        self._plugin_dir: str = os.path.join(
+            os.path.dirname(os.path.abspath(_mysql_connector.__file__)),
+            "mysql",
+            "vendor",
+            "plugin",
+        )
+        if platform.system() == "Linux":
+            # Use the authentication plugins from system if they aren't bundled
+            if not os.path.exists(self._plugin_dir):
+                self._plugin_dir = (
+                    "/usr/lib64/mysql/plugin"
+                    if os.path.exists("/usr/lib64/mysql/plugin")
+                    else "/usr/lib/mysql/plugin"
+                )
+    
+        self.converter: Optional[MySQLConverter] = None
+        super().__init__()
+    
+        if kwargs:
+            try:
+>               self.connect(**kwargs)
+
+../../../miniconda3/lib/python3.12/site-packages/mysql/connector/connection_cext.py:151: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.connection_cext.CMySQLConnection object at 0x7f0a3b4b4f80>
+kwargs = {'buffered': True, 'client_flags': 1286671, 'database': 'test_db', 'host': 'localhost', ...}
+
+    def connect(self, **kwargs: Any) -> None:
+        """Connects to the MySQL server.
+    
+        This method sets up the connection to the MySQL server. If no
+        arguments are given, it will use the already configured or default
+        values.
+    
+        Args:
+            **kwargs: For a complete list of possible arguments, see [1].
+    
+        Examples:
+            ```
+            >>> cnx = MySQLConnection(user='joe', database='test')
+            ```
+    
+        References:
+            [1]: https://dev.mysql.com/doc/connector-python/en/connector-python-connectargs.html
+        """
+        # open connection using the default charset id
+        if kwargs:
+            self.config(**kwargs)
+    
+        self.disconnect()
+>       self._open_connection()
+
+../../../miniconda3/lib/python3.12/site-packages/mysql/connector/abstracts.py:1399: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.connection_cext.CMySQLConnection object at 0x7f0a3b4b4f80>
+
+    def _open_connection(self) -> None:
+        charset_name = self._character_set.get_info(self._charset_id)[0]
+        # pylint: disable=c-extension-no-member
+        self._cmysql = _mysql_connector.MySQL(
+            buffered=self._buffered,
+            raw=self._raw,
+            charset_name=charset_name,
+            connection_timeout=(self._connection_timeout or 0),
+            use_unicode=self._use_unicode,
+            auth_plugin=self._auth_plugin,
+            plugin_dir=self._plugin_dir,
+        )
+        # pylint: enable=c-extension-no-member
+        if not self.isset_client_flag(ClientFlag.CONNECT_ARGS):
+            self._conn_attrs = {}
+    
+        cnx_kwargs = {
+            "host": self._host,
+            "user": self._user,
+            "password": self._password,
+            "password1": self._password1,
+            "password2": self._password2,
+            "password3": self._password3,
+            "database": self._database,
+            "port": self._port,
+            "client_flags": self._client_flags,
+            "unix_socket": self._unix_socket,
+            "compress": self._compress,
+            "ssl_disabled": True,
+            "conn_attrs": self._conn_attrs,
+            "local_infile": self._allow_local_infile,
+            "load_data_local_dir": self._allow_local_infile_in_path,
+            "oci_config_file": self._oci_config_file,
+            "oci_config_profile": self._oci_config_profile,
+            "webauthn_callback": (
+                import_object(self._webauthn_callback)
+                if isinstance(self._webauthn_callback, str)
+                else self._webauthn_callback
+            ),
+        }
+    
+        tls_versions = self._ssl.get("tls_versions")
+        if tls_versions is not None:
+            tls_versions.sort(reverse=True)  # type: ignore[union-attr]
+            tls_versions = ",".join(tls_versions)
+        if self._ssl.get("tls_ciphersuites") is not None:
+            ssl_ciphersuites = self._ssl.get("tls_ciphersuites")[  # type: ignore[index]
+                0
+            ]
+            tls_ciphersuites = self._ssl.get("tls_ciphersuites")[  # type: ignore[index]
+                1
+            ]
+        else:
+            ssl_ciphersuites = None
+            tls_ciphersuites = None
+        if (
+            tls_versions is not None
+            and "TLSv1.3" in tls_versions
+            and not tls_ciphersuites
+        ):
+            tls_ciphersuites = "TLS_AES_256_GCM_SHA384"
+        if not self._ssl_disabled:
+            cnx_kwargs.update(
+                {
+                    "ssl_ca": self._ssl.get("ca"),
+                    "ssl_cert": self._ssl.get("cert"),
+                    "ssl_key": self._ssl.get("key"),
+                    "ssl_cipher_suites": ssl_ciphersuites,
+                    "tls_versions": tls_versions,
+                    "tls_cipher_suites": tls_ciphersuites,
+                    "ssl_verify_cert": self._ssl.get("verify_cert") or False,
+                    "ssl_verify_identity": self._ssl.get("verify_identity") or False,
+                    "ssl_disabled": self._ssl_disabled,
+                }
+            )
+    
+        if os.name == "nt" and self._auth_plugin_class == "MySQLKerberosAuthPlugin":
+            cnx_kwargs["use_kerberos_gssapi"] = True
+    
+        try:
+            self._cmysql.connect(**cnx_kwargs)
+            self._cmysql.converter_str_fallback = self._converter_str_fallback
+            if self.converter:
+                self.converter.str_fallback = self._converter_str_fallback
+        except MySQLInterfaceError as err:
+>           raise get_mysql_exception(
+                msg=err.msg, errno=err.errno, sqlstate=err.sqlstate
+            ) from err
+E           sqlalchemy.exc.ProgrammingError: (mysql.connector.errors.ProgrammingError) 1045 (28000): Access denied for user 'user'@'localhost' (using password: YES)
+E           (Background on this error at: https://sqlalche.me/e/20/f405)
+
+../../../miniconda3/lib/python3.12/site-packages/mysql/connector/connection_cext.py:339: ProgrammingError
+
+During handling of the above exception, another exception occurred:
+
+self = <tests.test_db_manager.TestMySQLManager testMethod=test_connection_ping>
+mock_engine = <MagicMock name='create_engine' id='139681921611968'>
+
+    @patch('sqlalchemy.create_engine')
+    def test_connection_ping(self, mock_engine):
+        mock_connection = MagicMock()
+        mock_engine.return_value.connect.return_value = mock_connection
+    
+>       with create_db_manager(
+            db_type="mysql",
+            db_name="test_db",
+            user="user",
+            password="pass"
+        ) as db:
+
+test_db_manager.py:147: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../auth_plugin/db_manager/__init__.py:36: in create_db_manager
+    return manager_class(**kwargs)
+../auth_plugin/db_manager/handlers/mysql.py:14: in __init__
+    self.connect()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <auth_plugin.db_manager.handlers.mysql.MySQLManager object at 0x7f0a3b51e180>
+
+    def connect(self) -> None:
+        try:
+            connection_url = (
+                f"mysql+mysqlconnector://{self.user}:{self.password}@"
+                f"{self.host}:{self.port}/{self.db_name}"
+            )
+            self.client = create_engine(connection_url)
+            self.db = self.client.connect()
+            self.ping()
+            self.logger.info("Successfully connected to MySQL")
+    
+        except SQLAlchemyError as e:
+>           raise DBConnectionError(f"MySQL connection failed: {str(e)}")
+E           auth_plugin.db_manager.exceptions.DBConnectionError: MySQL connection failed: (mysql.connector.errors.ProgrammingError) 1045 (28000): Access denied for user 'user'@'localhost' (using password: YES)
+E           (Background on this error at: https://sqlalche.me/e/20/f405)
+
+../auth_plugin/db_manager/handlers/mysql.py:28: DBConnectionError
+________________ TestMySQLManager.test_mysql_connection_success ________________
+
+self = <mysql.connector.connection_cext.CMySQLConnection object at 0x7f0a3b499640>
+
+    def _open_connection(self) -> None:
+        charset_name = self._character_set.get_info(self._charset_id)[0]
+        # pylint: disable=c-extension-no-member
+        self._cmysql = _mysql_connector.MySQL(
+            buffered=self._buffered,
+            raw=self._raw,
+            charset_name=charset_name,
+            connection_timeout=(self._connection_timeout or 0),
+            use_unicode=self._use_unicode,
+            auth_plugin=self._auth_plugin,
+            plugin_dir=self._plugin_dir,
+        )
+        # pylint: enable=c-extension-no-member
+        if not self.isset_client_flag(ClientFlag.CONNECT_ARGS):
+            self._conn_attrs = {}
+    
+        cnx_kwargs = {
+            "host": self._host,
+            "user": self._user,
+            "password": self._password,
+            "password1": self._password1,
+            "password2": self._password2,
+            "password3": self._password3,
+            "database": self._database,
+            "port": self._port,
+            "client_flags": self._client_flags,
+            "unix_socket": self._unix_socket,
+            "compress": self._compress,
+            "ssl_disabled": True,
+            "conn_attrs": self._conn_attrs,
+            "local_infile": self._allow_local_infile,
+            "load_data_local_dir": self._allow_local_infile_in_path,
+            "oci_config_file": self._oci_config_file,
+            "oci_config_profile": self._oci_config_profile,
+            "webauthn_callback": (
+                import_object(self._webauthn_callback)
+                if isinstance(self._webauthn_callback, str)
+                else self._webauthn_callback
+            ),
+        }
+    
+        tls_versions = self._ssl.get("tls_versions")
+        if tls_versions is not None:
+            tls_versions.sort(reverse=True)  # type: ignore[union-attr]
+            tls_versions = ",".join(tls_versions)
+        if self._ssl.get("tls_ciphersuites") is not None:
+            ssl_ciphersuites = self._ssl.get("tls_ciphersuites")[  # type: ignore[index]
+                0
+            ]
+            tls_ciphersuites = self._ssl.get("tls_ciphersuites")[  # type: ignore[index]
+                1
+            ]
+        else:
+            ssl_ciphersuites = None
+            tls_ciphersuites = None
+        if (
+            tls_versions is not None
+            and "TLSv1.3" in tls_versions
+            and not tls_ciphersuites
+        ):
+            tls_ciphersuites = "TLS_AES_256_GCM_SHA384"
+        if not self._ssl_disabled:
+            cnx_kwargs.update(
+                {
+                    "ssl_ca": self._ssl.get("ca"),
+                    "ssl_cert": self._ssl.get("cert"),
+                    "ssl_key": self._ssl.get("key"),
+                    "ssl_cipher_suites": ssl_ciphersuites,
+                    "tls_versions": tls_versions,
+                    "tls_cipher_suites": tls_ciphersuites,
+                    "ssl_verify_cert": self._ssl.get("verify_cert") or False,
+                    "ssl_verify_identity": self._ssl.get("verify_identity") or False,
+                    "ssl_disabled": self._ssl_disabled,
+                }
+            )
+    
+        if os.name == "nt" and self._auth_plugin_class == "MySQLKerberosAuthPlugin":
+            cnx_kwargs["use_kerberos_gssapi"] = True
+    
+        try:
+>           self._cmysql.connect(**cnx_kwargs)
+E           _mysql_connector.MySQLInterfaceError: Access denied for user 'user'@'localhost' (using password: YES)
+
+../../../miniconda3/lib/python3.12/site-packages/mysql/connector/connection_cext.py:334: MySQLInterfaceError
+
+The above exception was the direct cause of the following exception:
+
+self = <sqlalchemy.engine.base.Connection object at 0x7f0a3b498a70>
+engine = Engine(mysql+mysqlconnector://user:***@localhost:3306/test_db)
+connection = None, _has_events = None, _allow_revalidate = True
+_allow_autobegin = True
+
+    def __init__(
+        self,
+        engine: Engine,
+        connection: Optional[PoolProxiedConnection] = None,
+        _has_events: Optional[bool] = None,
+        _allow_revalidate: bool = True,
+        _allow_autobegin: bool = True,
+    ):
+        """Construct a new Connection."""
+        self.engine = engine
+        self.dialect = dialect = engine.dialect
+    
+        if connection is None:
+            try:
+>               self._dbapi_connection = engine.raw_connection()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/base.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Engine(mysql+mysqlconnector://user:***@localhost:3306/test_db)
+
+    def raw_connection(self) -> PoolProxiedConnection:
+        """Return a "raw" DBAPI connection from the connection pool.
+    
+        The returned object is a proxied version of the DBAPI
+        connection object used by the underlying driver in use.
+        The object will have all the same behavior as the real DBAPI
+        connection, except that its ``close()`` method will result in the
+        connection being returned to the pool, rather than being closed
+        for real.
+    
+        This method provides direct DBAPI connection access for
+        special situations when the API provided by
+        :class:`_engine.Connection`
+        is not needed.   When a :class:`_engine.Connection` object is already
+        present, the DBAPI connection is available using
+        the :attr:`_engine.Connection.connection` accessor.
+    
+        .. seealso::
+    
+            :ref:`dbapi_connections`
+    
+        """
+>       return self.pool.connect()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3302: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4988c0>
+
+    def connect(self) -> PoolProxiedConnection:
+        """Return a DBAPI connection from the pool.
+    
+        The connection is instrumented such that when its
+        ``close()`` method is called, the connection will be returned to
+        the pool.
+    
+        """
+>       return _ConnectionFairy._checkout(self)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:449: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'sqlalchemy.pool.base._ConnectionFairy'>
+pool = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4988c0>
+threadconns = None, fairy = None
+
+    @classmethod
+    def _checkout(
+        cls,
+        pool: Pool,
+        threadconns: Optional[threading.local] = None,
+        fairy: Optional[_ConnectionFairy] = None,
+    ) -> _ConnectionFairy:
+        if not fairy:
+>           fairy = _ConnectionRecord.checkout(pool)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1263: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'sqlalchemy.pool.base._ConnectionRecord'>
+pool = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4988c0>
+
+    @classmethod
+    def checkout(cls, pool: Pool) -> _ConnectionFairy:
+        if TYPE_CHECKING:
+            rec = cast(_ConnectionRecord, pool._do_get())
+        else:
+>           rec = pool._do_get()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4988c0>
+
+    def _do_get(self) -> ConnectionPoolEntry:
+        use_overflow = self._max_overflow > -1
+    
+        wait = use_overflow and self._overflow >= self._max_overflow
+        try:
+            return self._pool.get(wait, self._timeout)
+        except sqla_queue.Empty:
+            # don't do things inside of "except Empty", because when we say
+            # we timed out or can't connect and raise, Python 3 tells
+            # people the real error is queue.Empty which it isn't.
+            pass
+        if use_overflow and self._overflow >= self._max_overflow:
+            if not wait:
+                return self._do_get()
+            else:
+                raise exc.TimeoutError(
+                    "QueuePool limit of size %d overflow %d reached, "
+                    "connection timed out, timeout %0.2f"
+                    % (self.size(), self.overflow(), self._timeout),
+                    code="3o7r",
+                )
+    
+        if self._inc_overflow():
+            try:
+                return self._create_connection()
+            except:
+>               with util.safe_reraise():
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:179: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.util.langhelpers.safe_reraise object at 0x7f0a3b4984c0>
+type_ = None, value = None, traceback = None
+
+    def __exit__(
+        self,
+        type_: Optional[Type[BaseException]],
+        value: Optional[BaseException],
+        traceback: Optional[types.TracebackType],
+    ) -> NoReturn:
+        assert self._exc_info is not None
+        # see #2703 for notes
+        if type_ is None:
+            exc_type, exc_value, exc_tb = self._exc_info
+            assert exc_value is not None
+            self._exc_info = None  # remove potential circular references
+>           raise exc_value.with_traceback(exc_tb)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4988c0>
+
+    def _do_get(self) -> ConnectionPoolEntry:
+        use_overflow = self._max_overflow > -1
+    
+        wait = use_overflow and self._overflow >= self._max_overflow
+        try:
+            return self._pool.get(wait, self._timeout)
+        except sqla_queue.Empty:
+            # don't do things inside of "except Empty", because when we say
+            # we timed out or can't connect and raise, Python 3 tells
+            # people the real error is queue.Empty which it isn't.
+            pass
+        if use_overflow and self._overflow >= self._max_overflow:
+            if not wait:
+                return self._do_get()
+            else:
+                raise exc.TimeoutError(
+                    "QueuePool limit of size %d overflow %d reached, "
+                    "connection timed out, timeout %0.2f"
+                    % (self.size(), self.overflow(), self._timeout),
+                    code="3o7r",
+                )
+    
+        if self._inc_overflow():
+            try:
+>               return self._create_connection()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4988c0>
+
+    def _create_connection(self) -> ConnectionPoolEntry:
+        """Called by subclasses to create a new ConnectionRecord."""
+    
+>       return _ConnectionRecord(self)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:390: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3ad51850>
+pool = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4988c0>, connect = True
+
+    def __init__(self, pool: Pool, connect: bool = True):
+        self.fresh = False
+        self.fairy_ref = None
+        self.starttime = 0
+        self.dbapi_connection = None
+    
+        self.__pool = pool
+        if connect:
+>           self.__connect()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3ad51850>
+
+    def __connect(self) -> None:
+        pool = self.__pool
+    
+        # ensure any existing connection is removed, so that if
+        # creator fails, this attribute stays None
+        self.dbapi_connection = None
+        try:
+            self.starttime = time.time()
+            self.dbapi_connection = connection = pool._invoke_creator(self)
+            pool.logger.debug("Created new connection %r", connection)
+            self.fresh = True
+        except BaseException as e:
+>           with util.safe_reraise():
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.util.langhelpers.safe_reraise object at 0x7f0a3b498550>
+type_ = None, value = None, traceback = None
+
+    def __exit__(
+        self,
+        type_: Optional[Type[BaseException]],
+        value: Optional[BaseException],
+        traceback: Optional[types.TracebackType],
+    ) -> NoReturn:
+        assert self._exc_info is not None
+        # see #2703 for notes
+        if type_ is None:
+            exc_type, exc_value, exc_tb = self._exc_info
+            assert exc_value is not None
+            self._exc_info = None  # remove potential circular references
+>           raise exc_value.with_traceback(exc_tb)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3ad51850>
+
+    def __connect(self) -> None:
+        pool = self.__pool
+    
+        # ensure any existing connection is removed, so that if
+        # creator fails, this attribute stays None
+        self.dbapi_connection = None
+        try:
+            self.starttime = time.time()
+>           self.dbapi_connection = connection = pool._invoke_creator(self)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+connection_record = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3ad51850>
+
+    def connect(
+        connection_record: Optional[ConnectionPoolEntry] = None,
+    ) -> DBAPIConnection:
+        if dialect._has_events:
+            for fn in dialect.dispatch.do_connect:
+                connection = cast(
+                    DBAPIConnection,
+                    fn(dialect, connection_record, cargs, cparams),
+                )
+                if connection is not None:
+                    return connection
+    
+>       return dialect.connect(*cargs, **cparams)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/create.py:643: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.mysql.mysqlconnector.MySQLDialect_mysqlconnector object at 0x7f0a3b4989b0>
+cargs = ()
+cparams = {'buffered': True, 'client_flags': 1286671, 'database': 'test_db', 'host': 'localhost', ...}
+
+    def connect(self, *cargs, **cparams):
+        # inherits the docstring from interfaces.Dialect.connect
+>       return self.loaded_dbapi.connect(*cargs, **cparams)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/default.py:621: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+args = ()
+kwargs = {'buffered': True, 'client_flags': 1286671, 'database': 'test_db', 'host': 'localhost', ...}
+dns_srv = False, use_pure = False
+
+    def connect(
+        *args: Any, **kwargs: Any
+    ) -> Union[PooledMySQLConnection, MySQLConnectionAbstract]:
+        """Creates or gets a MySQL connection object.
+    
+        In its simpliest form, `connect()` will open a connection to a
+        MySQL server and return a `MySQLConnectionAbstract` subclass
+        object such as `MySQLConnection` or `CMySQLConnection`.
+    
+        When any connection pooling arguments are given, for example `pool_name`
+        or `pool_size`, a pool is created or a previously one is used to return
+        a `PooledMySQLConnection`.
+    
+        Args:
+            *args: N/A.
+            **kwargs: For a complete list of possible arguments, see [1]. If no arguments
+                      are given, it uses the already configured or default values.
+    
+        Returns:
+            A `MySQLConnectionAbstract` subclass instance (such as `MySQLConnection` or
+            `CMySQLConnection`) or a `PooledMySQLConnection` instance.
+    
+        Examples:
+            A connection with the MySQL server can be established using either the
+            `mysql.connector.connect()` method or a `MySQLConnectionAbstract` subclass:
+            ```
+            >>> from mysql.connector import MySQLConnection, HAVE_CEXT
+            >>>
+            >>> cnx1 = mysql.connector.connect(user='joe', database='test')
+            >>> cnx2 = MySQLConnection(user='joe', database='test')
+            >>>
+            >>> cnx3 = None
+            >>> if HAVE_CEXT:
+            >>>     from mysql.connector import CMySQLConnection
+            >>>     cnx3 = CMySQLConnection(user='joe', database='test')
+            ```
+    
+        References:
+            [1]: https://dev.mysql.com/doc/connector-python/en/connector-python-connectargs.html
+        """
+        # DNS SRV
+        dns_srv = kwargs.pop("dns_srv") if "dns_srv" in kwargs else False
+    
+        if not isinstance(dns_srv, bool):
+            raise InterfaceError("The value of 'dns-srv' must be a boolean")
+    
+        if dns_srv:
+            if not HAVE_DNSPYTHON:
+                raise InterfaceError(
+                    "MySQL host configuration requested DNS "
+                    "SRV. This requires the Python dnspython "
+                    "module. Please refer to documentation"
+                )
+            if "unix_socket" in kwargs:
+                raise InterfaceError(
+                    "Using Unix domain sockets with DNS SRV lookup is not allowed"
+                )
+            if "port" in kwargs:
+                raise InterfaceError(
+                    "Specifying a port number with DNS SRV lookup is not allowed"
+                )
+            if "failover" in kwargs:
+                raise InterfaceError(
+                    "Specifying multiple hostnames with DNS SRV look up is not allowed"
+                )
+            if "host" not in kwargs:
+                kwargs["host"] = DEFAULT_CONFIGURATION["host"]
+    
+            try:
+                srv_records = dns.resolver.query(kwargs["host"], "SRV")
+            except dns.exception.DNSException:
+                raise InterfaceError(
+                    f"Unable to locate any hosts for '{kwargs['host']}'"
+                ) from None
+    
+            failover = []
+            for srv in srv_records:
+                failover.append(
+                    {
+                        "host": srv.target.to_text(omit_final_dot=True),
+                        "port": srv.port,
+                        "priority": srv.priority,
+                        "weight": srv.weight,
+                    }
+                )
+    
+            failover.sort(key=lambda x: (x["priority"], -x["weight"]))
+            kwargs["failover"] = [
+                {"host": srv["host"], "port": srv["port"]} for srv in failover
+            ]
+    
+        # Option files
+        if "read_default_file" in kwargs:
+            kwargs["option_files"] = kwargs["read_default_file"]
+            kwargs.pop("read_default_file")
+    
+        if "option_files" in kwargs:
+            new_config = read_option_files(**kwargs)
+            return connect(**new_config)
+    
+        # Failover
+        if "failover" in kwargs:
+            return _get_failover_connection(**kwargs)
+    
+        # Pooled connections
+        try:
+            if any(key in kwargs for key in CNX_POOL_ARGS):
+                return _get_pooled_connection(**kwargs)
+        except NameError:
+            # No pooling
+            pass
+    
+        # Use C Extension by default
+        use_pure = kwargs.get("use_pure", False)
+        if "use_pure" in kwargs:
+            del kwargs["use_pure"]  # Remove 'use_pure' from kwargs
+            if not use_pure and CMySQLConnection is None:
+                raise ImportError(ERROR_NO_CEXT)
+    
+        if CMySQLConnection and not use_pure:
+>           return CMySQLConnection(*args, **kwargs)
+
+../../../miniconda3/lib/python3.12/site-packages/mysql/connector/pooling.py:322: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.connection_cext.CMySQLConnection object at 0x7f0a3b499640>
+kwargs = {'buffered': True, 'client_flags': 1286671, 'database': 'test_db', 'host': 'localhost', ...}
+
+    def __init__(self, **kwargs: Any) -> None:
+        """Initialization"""
+        if not HAVE_CMYSQL:
+            raise RuntimeError("MySQL Connector/Python C Extension not available")
+        self._cmysql: Optional[
+            _mysql_connector.MySQL  # pylint: disable=c-extension-no-member
+        ] = None
+        self._columns: List[DescriptionType] = []
+        self._plugin_dir: str = os.path.join(
+            os.path.dirname(os.path.abspath(_mysql_connector.__file__)),
+            "mysql",
+            "vendor",
+            "plugin",
+        )
+        if platform.system() == "Linux":
+            # Use the authentication plugins from system if they aren't bundled
+            if not os.path.exists(self._plugin_dir):
+                self._plugin_dir = (
+                    "/usr/lib64/mysql/plugin"
+                    if os.path.exists("/usr/lib64/mysql/plugin")
+                    else "/usr/lib/mysql/plugin"
+                )
+    
+        self.converter: Optional[MySQLConverter] = None
+        super().__init__()
+    
+        if kwargs:
+            try:
+>               self.connect(**kwargs)
+
+../../../miniconda3/lib/python3.12/site-packages/mysql/connector/connection_cext.py:151: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.connection_cext.CMySQLConnection object at 0x7f0a3b499640>
+kwargs = {'buffered': True, 'client_flags': 1286671, 'database': 'test_db', 'host': 'localhost', ...}
+
+    def connect(self, **kwargs: Any) -> None:
+        """Connects to the MySQL server.
+    
+        This method sets up the connection to the MySQL server. If no
+        arguments are given, it will use the already configured or default
+        values.
+    
+        Args:
+            **kwargs: For a complete list of possible arguments, see [1].
+    
+        Examples:
+            ```
+            >>> cnx = MySQLConnection(user='joe', database='test')
+            ```
+    
+        References:
+            [1]: https://dev.mysql.com/doc/connector-python/en/connector-python-connectargs.html
+        """
+        # open connection using the default charset id
+        if kwargs:
+            self.config(**kwargs)
+    
+        self.disconnect()
+>       self._open_connection()
+
+../../../miniconda3/lib/python3.12/site-packages/mysql/connector/abstracts.py:1399: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.connection_cext.CMySQLConnection object at 0x7f0a3b499640>
+
+    def _open_connection(self) -> None:
+        charset_name = self._character_set.get_info(self._charset_id)[0]
+        # pylint: disable=c-extension-no-member
+        self._cmysql = _mysql_connector.MySQL(
+            buffered=self._buffered,
+            raw=self._raw,
+            charset_name=charset_name,
+            connection_timeout=(self._connection_timeout or 0),
+            use_unicode=self._use_unicode,
+            auth_plugin=self._auth_plugin,
+            plugin_dir=self._plugin_dir,
+        )
+        # pylint: enable=c-extension-no-member
+        if not self.isset_client_flag(ClientFlag.CONNECT_ARGS):
+            self._conn_attrs = {}
+    
+        cnx_kwargs = {
+            "host": self._host,
+            "user": self._user,
+            "password": self._password,
+            "password1": self._password1,
+            "password2": self._password2,
+            "password3": self._password3,
+            "database": self._database,
+            "port": self._port,
+            "client_flags": self._client_flags,
+            "unix_socket": self._unix_socket,
+            "compress": self._compress,
+            "ssl_disabled": True,
+            "conn_attrs": self._conn_attrs,
+            "local_infile": self._allow_local_infile,
+            "load_data_local_dir": self._allow_local_infile_in_path,
+            "oci_config_file": self._oci_config_file,
+            "oci_config_profile": self._oci_config_profile,
+            "webauthn_callback": (
+                import_object(self._webauthn_callback)
+                if isinstance(self._webauthn_callback, str)
+                else self._webauthn_callback
+            ),
+        }
+    
+        tls_versions = self._ssl.get("tls_versions")
+        if tls_versions is not None:
+            tls_versions.sort(reverse=True)  # type: ignore[union-attr]
+            tls_versions = ",".join(tls_versions)
+        if self._ssl.get("tls_ciphersuites") is not None:
+            ssl_ciphersuites = self._ssl.get("tls_ciphersuites")[  # type: ignore[index]
+                0
+            ]
+            tls_ciphersuites = self._ssl.get("tls_ciphersuites")[  # type: ignore[index]
+                1
+            ]
+        else:
+            ssl_ciphersuites = None
+            tls_ciphersuites = None
+        if (
+            tls_versions is not None
+            and "TLSv1.3" in tls_versions
+            and not tls_ciphersuites
+        ):
+            tls_ciphersuites = "TLS_AES_256_GCM_SHA384"
+        if not self._ssl_disabled:
+            cnx_kwargs.update(
+                {
+                    "ssl_ca": self._ssl.get("ca"),
+                    "ssl_cert": self._ssl.get("cert"),
+                    "ssl_key": self._ssl.get("key"),
+                    "ssl_cipher_suites": ssl_ciphersuites,
+                    "tls_versions": tls_versions,
+                    "tls_cipher_suites": tls_ciphersuites,
+                    "ssl_verify_cert": self._ssl.get("verify_cert") or False,
+                    "ssl_verify_identity": self._ssl.get("verify_identity") or False,
+                    "ssl_disabled": self._ssl_disabled,
+                }
+            )
+    
+        if os.name == "nt" and self._auth_plugin_class == "MySQLKerberosAuthPlugin":
+            cnx_kwargs["use_kerberos_gssapi"] = True
+    
+        try:
+            self._cmysql.connect(**cnx_kwargs)
+            self._cmysql.converter_str_fallback = self._converter_str_fallback
+            if self.converter:
+                self.converter.str_fallback = self._converter_str_fallback
+        except MySQLInterfaceError as err:
+>           raise get_mysql_exception(
+                msg=err.msg, errno=err.errno, sqlstate=err.sqlstate
+            ) from err
+E           mysql.connector.errors.ProgrammingError: 1045 (28000): Access denied for user 'user'@'localhost' (using password: YES)
+
+../../../miniconda3/lib/python3.12/site-packages/mysql/connector/connection_cext.py:339: ProgrammingError
+
+The above exception was the direct cause of the following exception:
+
+self = <auth_plugin.db_manager.handlers.mysql.MySQLManager object at 0x7f0a3be78170>
+
+    def connect(self) -> None:
+        try:
+            connection_url = (
+                f"mysql+mysqlconnector://{self.user}:{self.password}@"
+                f"{self.host}:{self.port}/{self.db_name}"
+            )
+            self.client = create_engine(connection_url)
+>           self.db = self.client.connect()
+
+../auth_plugin/db_manager/handlers/mysql.py:23: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Engine(mysql+mysqlconnector://user:***@localhost:3306/test_db)
+
+    def connect(self) -> Connection:
+        """Return a new :class:`_engine.Connection` object.
+    
+        The :class:`_engine.Connection` acts as a Python context manager, so
+        the typical use of this method looks like::
+    
+            with engine.connect() as connection:
+                connection.execute(text("insert into table values ('foo')"))
+                connection.commit()
+    
+        Where above, after the block is completed, the connection is "closed"
+        and its underlying DBAPI resources are returned to the connection pool.
+        This also has the effect of rolling back any transaction that
+        was explicitly begun or was begun via autobegin, and will
+        emit the :meth:`_events.ConnectionEvents.rollback` event if one was
+        started and is still in progress.
+    
+        .. seealso::
+    
+            :meth:`_engine.Engine.begin`
+    
+        """
+    
+>       return self._connection_cls(self)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3278: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.engine.base.Connection object at 0x7f0a3b498a70>
+engine = Engine(mysql+mysqlconnector://user:***@localhost:3306/test_db)
+connection = None, _has_events = None, _allow_revalidate = True
+_allow_autobegin = True
+
+    def __init__(
+        self,
+        engine: Engine,
+        connection: Optional[PoolProxiedConnection] = None,
+        _has_events: Optional[bool] = None,
+        _allow_revalidate: bool = True,
+        _allow_autobegin: bool = True,
+    ):
+        """Construct a new Connection."""
+        self.engine = engine
+        self.dialect = dialect = engine.dialect
+    
+        if connection is None:
+            try:
+                self._dbapi_connection = engine.raw_connection()
+            except dialect.loaded_dbapi.Error as err:
+>               Connection._handle_dbapi_exception_noconnection(
+                    err, dialect, engine
+                )
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/base.py:148: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'sqlalchemy.engine.base.Connection'>
+e = ProgrammingError(1045, "1045 (28000): Access denied for user 'user'@'localhost' (using password: YES)", '28000')
+dialect = <sqlalchemy.dialects.mysql.mysqlconnector.MySQLDialect_mysqlconnector object at 0x7f0a3b4989b0>
+engine = Engine(mysql+mysqlconnector://user:***@localhost:3306/test_db)
+is_disconnect = False, invalidate_pool_on_disconnect = True, is_pre_ping = False
+
+    @classmethod
+    def _handle_dbapi_exception_noconnection(
+        cls,
+        e: BaseException,
+        dialect: Dialect,
+        engine: Optional[Engine] = None,
+        is_disconnect: Optional[bool] = None,
+        invalidate_pool_on_disconnect: bool = True,
+        is_pre_ping: bool = False,
+    ) -> NoReturn:
+        exc_info = sys.exc_info()
+    
+        if is_disconnect is None:
+            is_disconnect = isinstance(
+                e, dialect.loaded_dbapi.Error
+            ) and dialect.is_disconnect(e, None, None)
+    
+        should_wrap = isinstance(e, dialect.loaded_dbapi.Error)
+    
+        if should_wrap:
+            sqlalchemy_exception = exc.DBAPIError.instance(
+                None,
+                None,
+                cast(Exception, e),
+                dialect.loaded_dbapi.Error,
+                hide_parameters=(
+                    engine.hide_parameters if engine is not None else False
+                ),
+                connection_invalidated=is_disconnect,
+                dialect=dialect,
+            )
+        else:
+            sqlalchemy_exception = None
+    
+        newraise = None
+    
+        if dialect._has_events:
+            ctx = ExceptionContextImpl(
+                e,
+                sqlalchemy_exception,
+                engine,
+                dialect,
+                None,
+                None,
+                None,
+                None,
+                None,
+                is_disconnect,
+                invalidate_pool_on_disconnect,
+                is_pre_ping,
+            )
+            for fn in dialect.dispatch.handle_error:
+                try:
+                    # handler returns an exception;
+                    # call next handler in a chain
+                    per_fn = fn(ctx)
+                    if per_fn is not None:
+                        ctx.chained_exception = newraise = per_fn
+                except Exception as _raised:
+                    # handler raises an exception - stop processing
+                    newraise = _raised
+                    break
+    
+            if sqlalchemy_exception and is_disconnect != ctx.is_disconnect:
+                sqlalchemy_exception.connection_invalidated = is_disconnect = (
+                    ctx.is_disconnect
+                )
+    
+        if newraise:
+            raise newraise.with_traceback(exc_info[2]) from e
+        elif should_wrap:
+            assert sqlalchemy_exception is not None
+>           raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2442: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.engine.base.Connection object at 0x7f0a3b498a70>
+engine = Engine(mysql+mysqlconnector://user:***@localhost:3306/test_db)
+connection = None, _has_events = None, _allow_revalidate = True
+_allow_autobegin = True
+
+    def __init__(
+        self,
+        engine: Engine,
+        connection: Optional[PoolProxiedConnection] = None,
+        _has_events: Optional[bool] = None,
+        _allow_revalidate: bool = True,
+        _allow_autobegin: bool = True,
+    ):
+        """Construct a new Connection."""
+        self.engine = engine
+        self.dialect = dialect = engine.dialect
+    
+        if connection is None:
+            try:
+>               self._dbapi_connection = engine.raw_connection()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/base.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Engine(mysql+mysqlconnector://user:***@localhost:3306/test_db)
+
+    def raw_connection(self) -> PoolProxiedConnection:
+        """Return a "raw" DBAPI connection from the connection pool.
+    
+        The returned object is a proxied version of the DBAPI
+        connection object used by the underlying driver in use.
+        The object will have all the same behavior as the real DBAPI
+        connection, except that its ``close()`` method will result in the
+        connection being returned to the pool, rather than being closed
+        for real.
+    
+        This method provides direct DBAPI connection access for
+        special situations when the API provided by
+        :class:`_engine.Connection`
+        is not needed.   When a :class:`_engine.Connection` object is already
+        present, the DBAPI connection is available using
+        the :attr:`_engine.Connection.connection` accessor.
+    
+        .. seealso::
+    
+            :ref:`dbapi_connections`
+    
+        """
+>       return self.pool.connect()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/base.py:3302: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4988c0>
+
+    def connect(self) -> PoolProxiedConnection:
+        """Return a DBAPI connection from the pool.
+    
+        The connection is instrumented such that when its
+        ``close()`` method is called, the connection will be returned to
+        the pool.
+    
+        """
+>       return _ConnectionFairy._checkout(self)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:449: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'sqlalchemy.pool.base._ConnectionFairy'>
+pool = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4988c0>
+threadconns = None, fairy = None
+
+    @classmethod
+    def _checkout(
+        cls,
+        pool: Pool,
+        threadconns: Optional[threading.local] = None,
+        fairy: Optional[_ConnectionFairy] = None,
+    ) -> _ConnectionFairy:
+        if not fairy:
+>           fairy = _ConnectionRecord.checkout(pool)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:1263: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'sqlalchemy.pool.base._ConnectionRecord'>
+pool = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4988c0>
+
+    @classmethod
+    def checkout(cls, pool: Pool) -> _ConnectionFairy:
+        if TYPE_CHECKING:
+            rec = cast(_ConnectionRecord, pool._do_get())
+        else:
+>           rec = pool._do_get()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:712: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4988c0>
+
+    def _do_get(self) -> ConnectionPoolEntry:
+        use_overflow = self._max_overflow > -1
+    
+        wait = use_overflow and self._overflow >= self._max_overflow
+        try:
+            return self._pool.get(wait, self._timeout)
+        except sqla_queue.Empty:
+            # don't do things inside of "except Empty", because when we say
+            # we timed out or can't connect and raise, Python 3 tells
+            # people the real error is queue.Empty which it isn't.
+            pass
+        if use_overflow and self._overflow >= self._max_overflow:
+            if not wait:
+                return self._do_get()
+            else:
+                raise exc.TimeoutError(
+                    "QueuePool limit of size %d overflow %d reached, "
+                    "connection timed out, timeout %0.2f"
+                    % (self.size(), self.overflow(), self._timeout),
+                    code="3o7r",
+                )
+    
+        if self._inc_overflow():
+            try:
+                return self._create_connection()
+            except:
+>               with util.safe_reraise():
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:179: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.util.langhelpers.safe_reraise object at 0x7f0a3b4984c0>
+type_ = None, value = None, traceback = None
+
+    def __exit__(
+        self,
+        type_: Optional[Type[BaseException]],
+        value: Optional[BaseException],
+        traceback: Optional[types.TracebackType],
+    ) -> NoReturn:
+        assert self._exc_info is not None
+        # see #2703 for notes
+        if type_ is None:
+            exc_type, exc_value, exc_tb = self._exc_info
+            assert exc_value is not None
+            self._exc_info = None  # remove potential circular references
+>           raise exc_value.with_traceback(exc_tb)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4988c0>
+
+    def _do_get(self) -> ConnectionPoolEntry:
+        use_overflow = self._max_overflow > -1
+    
+        wait = use_overflow and self._overflow >= self._max_overflow
+        try:
+            return self._pool.get(wait, self._timeout)
+        except sqla_queue.Empty:
+            # don't do things inside of "except Empty", because when we say
+            # we timed out or can't connect and raise, Python 3 tells
+            # people the real error is queue.Empty which it isn't.
+            pass
+        if use_overflow and self._overflow >= self._max_overflow:
+            if not wait:
+                return self._do_get()
+            else:
+                raise exc.TimeoutError(
+                    "QueuePool limit of size %d overflow %d reached, "
+                    "connection timed out, timeout %0.2f"
+                    % (self.size(), self.overflow(), self._timeout),
+                    code="3o7r",
+                )
+    
+        if self._inc_overflow():
+            try:
+>               return self._create_connection()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/impl.py:177: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4988c0>
+
+    def _create_connection(self) -> ConnectionPoolEntry:
+        """Called by subclasses to create a new ConnectionRecord."""
+    
+>       return _ConnectionRecord(self)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:390: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3ad51850>
+pool = <sqlalchemy.pool.impl.QueuePool object at 0x7f0a3b4988c0>, connect = True
+
+    def __init__(self, pool: Pool, connect: bool = True):
+        self.fresh = False
+        self.fairy_ref = None
+        self.starttime = 0
+        self.dbapi_connection = None
+    
+        self.__pool = pool
+        if connect:
+>           self.__connect()
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:674: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3ad51850>
+
+    def __connect(self) -> None:
+        pool = self.__pool
+    
+        # ensure any existing connection is removed, so that if
+        # creator fails, this attribute stays None
+        self.dbapi_connection = None
+        try:
+            self.starttime = time.time()
+            self.dbapi_connection = connection = pool._invoke_creator(self)
+            pool.logger.debug("Created new connection %r", connection)
+            self.fresh = True
+        except BaseException as e:
+>           with util.safe_reraise():
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:900: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.util.langhelpers.safe_reraise object at 0x7f0a3b498550>
+type_ = None, value = None, traceback = None
+
+    def __exit__(
+        self,
+        type_: Optional[Type[BaseException]],
+        value: Optional[BaseException],
+        traceback: Optional[types.TracebackType],
+    ) -> NoReturn:
+        assert self._exc_info is not None
+        # see #2703 for notes
+        if type_ is None:
+            exc_type, exc_value, exc_tb = self._exc_info
+            assert exc_value is not None
+            self._exc_info = None  # remove potential circular references
+>           raise exc_value.with_traceback(exc_tb)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3ad51850>
+
+    def __connect(self) -> None:
+        pool = self.__pool
+    
+        # ensure any existing connection is removed, so that if
+        # creator fails, this attribute stays None
+        self.dbapi_connection = None
+        try:
+            self.starttime = time.time()
+>           self.dbapi_connection = connection = pool._invoke_creator(self)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/pool/base.py:896: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+connection_record = <sqlalchemy.pool.base._ConnectionRecord object at 0x7f0a3ad51850>
+
+    def connect(
+        connection_record: Optional[ConnectionPoolEntry] = None,
+    ) -> DBAPIConnection:
+        if dialect._has_events:
+            for fn in dialect.dispatch.do_connect:
+                connection = cast(
+                    DBAPIConnection,
+                    fn(dialect, connection_record, cargs, cparams),
+                )
+                if connection is not None:
+                    return connection
+    
+>       return dialect.connect(*cargs, **cparams)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/create.py:643: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.mysql.mysqlconnector.MySQLDialect_mysqlconnector object at 0x7f0a3b4989b0>
+cargs = ()
+cparams = {'buffered': True, 'client_flags': 1286671, 'database': 'test_db', 'host': 'localhost', ...}
+
+    def connect(self, *cargs, **cparams):
+        # inherits the docstring from interfaces.Dialect.connect
+>       return self.loaded_dbapi.connect(*cargs, **cparams)
+
+../../../miniconda3/lib/python3.12/site-packages/sqlalchemy/engine/default.py:621: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+args = ()
+kwargs = {'buffered': True, 'client_flags': 1286671, 'database': 'test_db', 'host': 'localhost', ...}
+dns_srv = False, use_pure = False
+
+    def connect(
+        *args: Any, **kwargs: Any
+    ) -> Union[PooledMySQLConnection, MySQLConnectionAbstract]:
+        """Creates or gets a MySQL connection object.
+    
+        In its simpliest form, `connect()` will open a connection to a
+        MySQL server and return a `MySQLConnectionAbstract` subclass
+        object such as `MySQLConnection` or `CMySQLConnection`.
+    
+        When any connection pooling arguments are given, for example `pool_name`
+        or `pool_size`, a pool is created or a previously one is used to return
+        a `PooledMySQLConnection`.
+    
+        Args:
+            *args: N/A.
+            **kwargs: For a complete list of possible arguments, see [1]. If no arguments
+                      are given, it uses the already configured or default values.
+    
+        Returns:
+            A `MySQLConnectionAbstract` subclass instance (such as `MySQLConnection` or
+            `CMySQLConnection`) or a `PooledMySQLConnection` instance.
+    
+        Examples:
+            A connection with the MySQL server can be established using either the
+            `mysql.connector.connect()` method or a `MySQLConnectionAbstract` subclass:
+            ```
+            >>> from mysql.connector import MySQLConnection, HAVE_CEXT
+            >>>
+            >>> cnx1 = mysql.connector.connect(user='joe', database='test')
+            >>> cnx2 = MySQLConnection(user='joe', database='test')
+            >>>
+            >>> cnx3 = None
+            >>> if HAVE_CEXT:
+            >>>     from mysql.connector import CMySQLConnection
+            >>>     cnx3 = CMySQLConnection(user='joe', database='test')
+            ```
+    
+        References:
+            [1]: https://dev.mysql.com/doc/connector-python/en/connector-python-connectargs.html
+        """
+        # DNS SRV
+        dns_srv = kwargs.pop("dns_srv") if "dns_srv" in kwargs else False
+    
+        if not isinstance(dns_srv, bool):
+            raise InterfaceError("The value of 'dns-srv' must be a boolean")
+    
+        if dns_srv:
+            if not HAVE_DNSPYTHON:
+                raise InterfaceError(
+                    "MySQL host configuration requested DNS "
+                    "SRV. This requires the Python dnspython "
+                    "module. Please refer to documentation"
+                )
+            if "unix_socket" in kwargs:
+                raise InterfaceError(
+                    "Using Unix domain sockets with DNS SRV lookup is not allowed"
+                )
+            if "port" in kwargs:
+                raise InterfaceError(
+                    "Specifying a port number with DNS SRV lookup is not allowed"
+                )
+            if "failover" in kwargs:
+                raise InterfaceError(
+                    "Specifying multiple hostnames with DNS SRV look up is not allowed"
+                )
+            if "host" not in kwargs:
+                kwargs["host"] = DEFAULT_CONFIGURATION["host"]
+    
+            try:
+                srv_records = dns.resolver.query(kwargs["host"], "SRV")
+            except dns.exception.DNSException:
+                raise InterfaceError(
+                    f"Unable to locate any hosts for '{kwargs['host']}'"
+                ) from None
+    
+            failover = []
+            for srv in srv_records:
+                failover.append(
+                    {
+                        "host": srv.target.to_text(omit_final_dot=True),
+                        "port": srv.port,
+                        "priority": srv.priority,
+                        "weight": srv.weight,
+                    }
+                )
+    
+            failover.sort(key=lambda x: (x["priority"], -x["weight"]))
+            kwargs["failover"] = [
+                {"host": srv["host"], "port": srv["port"]} for srv in failover
+            ]
+    
+        # Option files
+        if "read_default_file" in kwargs:
+            kwargs["option_files"] = kwargs["read_default_file"]
+            kwargs.pop("read_default_file")
+    
+        if "option_files" in kwargs:
+            new_config = read_option_files(**kwargs)
+            return connect(**new_config)
+    
+        # Failover
+        if "failover" in kwargs:
+            return _get_failover_connection(**kwargs)
+    
+        # Pooled connections
+        try:
+            if any(key in kwargs for key in CNX_POOL_ARGS):
+                return _get_pooled_connection(**kwargs)
+        except NameError:
+            # No pooling
+            pass
+    
+        # Use C Extension by default
+        use_pure = kwargs.get("use_pure", False)
+        if "use_pure" in kwargs:
+            del kwargs["use_pure"]  # Remove 'use_pure' from kwargs
+            if not use_pure and CMySQLConnection is None:
+                raise ImportError(ERROR_NO_CEXT)
+    
+        if CMySQLConnection and not use_pure:
+>           return CMySQLConnection(*args, **kwargs)
+
+../../../miniconda3/lib/python3.12/site-packages/mysql/connector/pooling.py:322: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.connection_cext.CMySQLConnection object at 0x7f0a3b499640>
+kwargs = {'buffered': True, 'client_flags': 1286671, 'database': 'test_db', 'host': 'localhost', ...}
+
+    def __init__(self, **kwargs: Any) -> None:
+        """Initialization"""
+        if not HAVE_CMYSQL:
+            raise RuntimeError("MySQL Connector/Python C Extension not available")
+        self._cmysql: Optional[
+            _mysql_connector.MySQL  # pylint: disable=c-extension-no-member
+        ] = None
+        self._columns: List[DescriptionType] = []
+        self._plugin_dir: str = os.path.join(
+            os.path.dirname(os.path.abspath(_mysql_connector.__file__)),
+            "mysql",
+            "vendor",
+            "plugin",
+        )
+        if platform.system() == "Linux":
+            # Use the authentication plugins from system if they aren't bundled
+            if not os.path.exists(self._plugin_dir):
+                self._plugin_dir = (
+                    "/usr/lib64/mysql/plugin"
+                    if os.path.exists("/usr/lib64/mysql/plugin")
+                    else "/usr/lib/mysql/plugin"
+                )
+    
+        self.converter: Optional[MySQLConverter] = None
+        super().__init__()
+    
+        if kwargs:
+            try:
+>               self.connect(**kwargs)
+
+../../../miniconda3/lib/python3.12/site-packages/mysql/connector/connection_cext.py:151: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.connection_cext.CMySQLConnection object at 0x7f0a3b499640>
+kwargs = {'buffered': True, 'client_flags': 1286671, 'database': 'test_db', 'host': 'localhost', ...}
+
+    def connect(self, **kwargs: Any) -> None:
+        """Connects to the MySQL server.
+    
+        This method sets up the connection to the MySQL server. If no
+        arguments are given, it will use the already configured or default
+        values.
+    
+        Args:
+            **kwargs: For a complete list of possible arguments, see [1].
+    
+        Examples:
+            ```
+            >>> cnx = MySQLConnection(user='joe', database='test')
+            ```
+    
+        References:
+            [1]: https://dev.mysql.com/doc/connector-python/en/connector-python-connectargs.html
+        """
+        # open connection using the default charset id
+        if kwargs:
+            self.config(**kwargs)
+    
+        self.disconnect()
+>       self._open_connection()
+
+../../../miniconda3/lib/python3.12/site-packages/mysql/connector/abstracts.py:1399: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mysql.connector.connection_cext.CMySQLConnection object at 0x7f0a3b499640>
+
+    def _open_connection(self) -> None:
+        charset_name = self._character_set.get_info(self._charset_id)[0]
+        # pylint: disable=c-extension-no-member
+        self._cmysql = _mysql_connector.MySQL(
+            buffered=self._buffered,
+            raw=self._raw,
+            charset_name=charset_name,
+            connection_timeout=(self._connection_timeout or 0),
+            use_unicode=self._use_unicode,
+            auth_plugin=self._auth_plugin,
+            plugin_dir=self._plugin_dir,
+        )
+        # pylint: enable=c-extension-no-member
+        if not self.isset_client_flag(ClientFlag.CONNECT_ARGS):
+            self._conn_attrs = {}
+    
+        cnx_kwargs = {
+            "host": self._host,
+            "user": self._user,
+            "password": self._password,
+            "password1": self._password1,
+            "password2": self._password2,
+            "password3": self._password3,
+            "database": self._database,
+            "port": self._port,
+            "client_flags": self._client_flags,
+            "unix_socket": self._unix_socket,
+            "compress": self._compress,
+            "ssl_disabled": True,
+            "conn_attrs": self._conn_attrs,
+            "local_infile": self._allow_local_infile,
+            "load_data_local_dir": self._allow_local_infile_in_path,
+            "oci_config_file": self._oci_config_file,
+            "oci_config_profile": self._oci_config_profile,
+            "webauthn_callback": (
+                import_object(self._webauthn_callback)
+                if isinstance(self._webauthn_callback, str)
+                else self._webauthn_callback
+            ),
+        }
+    
+        tls_versions = self._ssl.get("tls_versions")
+        if tls_versions is not None:
+            tls_versions.sort(reverse=True)  # type: ignore[union-attr]
+            tls_versions = ",".join(tls_versions)
+        if self._ssl.get("tls_ciphersuites") is not None:
+            ssl_ciphersuites = self._ssl.get("tls_ciphersuites")[  # type: ignore[index]
+                0
+            ]
+            tls_ciphersuites = self._ssl.get("tls_ciphersuites")[  # type: ignore[index]
+                1
+            ]
+        else:
+            ssl_ciphersuites = None
+            tls_ciphersuites = None
+        if (
+            tls_versions is not None
+            and "TLSv1.3" in tls_versions
+            and not tls_ciphersuites
+        ):
+            tls_ciphersuites = "TLS_AES_256_GCM_SHA384"
+        if not self._ssl_disabled:
+            cnx_kwargs.update(
+                {
+                    "ssl_ca": self._ssl.get("ca"),
+                    "ssl_cert": self._ssl.get("cert"),
+                    "ssl_key": self._ssl.get("key"),
+                    "ssl_cipher_suites": ssl_ciphersuites,
+                    "tls_versions": tls_versions,
+                    "tls_cipher_suites": tls_ciphersuites,
+                    "ssl_verify_cert": self._ssl.get("verify_cert") or False,
+                    "ssl_verify_identity": self._ssl.get("verify_identity") or False,
+                    "ssl_disabled": self._ssl_disabled,
+                }
+            )
+    
+        if os.name == "nt" and self._auth_plugin_class == "MySQLKerberosAuthPlugin":
+            cnx_kwargs["use_kerberos_gssapi"] = True
+    
+        try:
+            self._cmysql.connect(**cnx_kwargs)
+            self._cmysql.converter_str_fallback = self._converter_str_fallback
+            if self.converter:
+                self.converter.str_fallback = self._converter_str_fallback
+        except MySQLInterfaceError as err:
+>           raise get_mysql_exception(
+                msg=err.msg, errno=err.errno, sqlstate=err.sqlstate
+            ) from err
+E           sqlalchemy.exc.ProgrammingError: (mysql.connector.errors.ProgrammingError) 1045 (28000): Access denied for user 'user'@'localhost' (using password: YES)
+E           (Background on this error at: https://sqlalche.me/e/20/f405)
+
+../../../miniconda3/lib/python3.12/site-packages/mysql/connector/connection_cext.py:339: ProgrammingError
+
+During handling of the above exception, another exception occurred:
+
+self = <tests.test_db_manager.TestMySQLManager testMethod=test_mysql_connection_success>
+mock_engine = <MagicMock name='create_engine' id='139681921080624'>
+
+    @patch('sqlalchemy.create_engine')
+    def test_mysql_connection_success(self, mock_engine):
+        mock_connection = MagicMock()
+        mock_engine.return_value.connect.return_value = mock_connection
+    
+>       with create_db_manager(
+            db_type="mysql",
+            db_name="test_db",
+            user="user",
+            password="pass"
+        ) as db:
+
+test_db_manager.py:111: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../auth_plugin/db_manager/__init__.py:36: in create_db_manager
+    return manager_class(**kwargs)
+../auth_plugin/db_manager/handlers/mysql.py:14: in __init__
+    self.connect()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <auth_plugin.db_manager.handlers.mysql.MySQLManager object at 0x7f0a3be78170>
+
+    def connect(self) -> None:
+        try:
+            connection_url = (
+                f"mysql+mysqlconnector://{self.user}:{self.password}@"
+                f"{self.host}:{self.port}/{self.db_name}"
+            )
+            self.client = create_engine(connection_url)
+            self.db = self.client.connect()
+            self.ping()
+            self.logger.info("Successfully connected to MySQL")
+    
+        except SQLAlchemyError as e:
+>           raise DBConnectionError(f"MySQL connection failed: {str(e)}")
+E           auth_plugin.db_manager.exceptions.DBConnectionError: MySQL connection failed: (mysql.connector.errors.ProgrammingError) 1045 (28000): Access denied for user 'user'@'localhost' (using password: YES)
+E           (Background on this error at: https://sqlalche.me/e/20/f405)
+
+../auth_plugin/db_manager/handlers/mysql.py:28: DBConnectionError
+=============================== warnings summary ===============================
+tests/test_db_manager.py: 11 warnings
+  /home/visesh/miniconda3/lib/python3.12/unittest/case.py:580: RuntimeWarning: TestResult has no addDuration method
+    warnings.warn("TestResult has no addDuration method",
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED test_db_manager.py::TestPostgresDBManager::test_postgres_connection_success
+FAILED test_db_manager.py::TestMySQLManager::test_connection_ping - auth_plug...
+FAILED test_db_manager.py::TestMySQLManager::test_mysql_connection_success - ...
+=================== 3 failed, 8 passed, 11 warnings in 2.22s ===================

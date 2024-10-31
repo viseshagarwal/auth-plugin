@@ -1,69 +1,158 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from auth_plugin.db_manager import DBManager  # Replace with the actual module name
+import pymongo
+import sqlalchemy
+from auth_plugin.db_manager import create_db_manager
+from auth_plugin.db_manager.exceptions import (
+    DBConnectionError,
+    DBAuthenticationError,
+    DBConfigurationError
+)
 
 
-class TestDBManagerQueries(unittest.TestCase):
+class TestDBManager(unittest.TestCase):
+    """Test cases for database manager factory and base functionality"""
 
-    @patch("psycopg2.connect")
-    def test_postgres_execute_query(self, mock_connect):
-        mock_conn = MagicMock()
-        mock_cursor = MagicMock()
-        mock_conn.cursor.return_value = mock_cursor
-        mock_connect.return_value = mock_conn
-        db_manager = DBManager(
-            db_type="postgres", db_name="test_db", user="user", password="password"
+    def test_invalid_db_type(self):
+        with self.assertRaises(DBConfigurationError):
+            create_db_manager(db_type="invalid", db_name="test")
+
+    def test_missing_required_params(self):
+        with self.assertRaises(DBConfigurationError):
+            create_db_manager(db_type="mysql", db_name="")
+
+
+class TestMongoDBManager(unittest.TestCase):
+    """Test cases for MongoDB manager"""
+
+    @patch('pymongo.MongoClient')
+    def test_mongodb_connection_success(self, mock_client):
+        mock_db = MagicMock()
+        mock_client.return_value.__getitem__.return_value = mock_db
+
+        with create_db_manager(
+            db_type="mongodb",
+            db_name="test_db",
+            host="localhost",
+            port=27017
+        ) as db:
+            self.assertIsNotNone(db.client)
+            self.assertIsNotNone(db.db)
+            mock_client.assert_called_once()
+
+    @patch('pymongo.MongoClient')
+    def test_mongodb_auth_failure(self, mock_client):
+        mock_client.side_effect = pymongo.errors.OperationFailure(
+            "Authentication failed"
         )
 
-        db_manager.execute_query("SELECT * FROM table_name")
-        mock_cursor.execute.assert_called_once_with("SELECT * FROM table_name", None)
+        with self.assertRaises(DBAuthenticationError):
+            create_db_manager(
+                db_type="mongodb",
+                db_name="test_db",
+                user="wrong",
+                password="wrong"
+            )
 
-    @patch("mysql.connector.connect")
-    def test_mysql_execute_query(self, mock_connect):
-        mock_conn = MagicMock()
-        mock_cursor = MagicMock()
-        mock_conn.cursor.return_value = mock_cursor
-        mock_connect.return_value = mock_conn
-        db_manager = DBManager(
-            db_type="mysql", db_name="test_db", user="user", password="password"
+    @patch('pymongo.MongoClient')
+    def test_mongodb_connection_timeout(self, mock_client):
+        mock_client.side_effect = pymongo.errors.ServerSelectionTimeoutError(
+            "Connection timed out"
         )
 
-        db_manager.execute_query("SELECT * FROM table_name")
-        mock_cursor.execute.assert_called_once_with("SELECT * FROM table_name", None)
+        with self.assertRaises(DBConnectionError):
+            create_db_manager(
+                db_type="mongodb",
+                db_name="test_db"
+            )
 
-    @patch("psycopg2.connect")
-    def test_postgres_fetch_results(self, mock_connect):
-        mock_conn = MagicMock()
-        mock_cursor = MagicMock()
-        mock_cursor.fetchall.return_value = [("row1",), ("row2",)]
-        mock_conn.cursor.return_value = mock_cursor
-        mock_connect.return_value = mock_conn
-        db_manager = DBManager(
-            db_type="postgres", db_name="test_db", user="user", password="password"
+
+class TestPostgresDBManager(unittest.TestCase):
+    """Test cases for PostgreSQL manager"""
+
+    @patch('sqlalchemy.create_engine')
+    def test_postgres_connection_success(self, mock_engine):
+        mock_connection = MagicMock()
+        mock_engine.return_value.connect.return_value = mock_connection
+
+        with create_db_manager(
+            db_type="postgresql",
+            db_name="test_db",
+            user="user",
+            password="pass"
+        ) as db:
+            self.assertIsNotNone(db.client)
+            self.assertIsNotNone(db.db)
+            mock_engine.assert_called_once()
+
+    @patch('sqlalchemy.create_engine')
+    def test_postgres_connection_failure(self, mock_engine):
+        mock_engine.side_effect = sqlalchemy.exc.OperationalError(
+            "statement", "params", "orig"
         )
 
-        results = db_manager.fetch_results()
-        self.assertEqual(results, [("row1",), ("row2",)])
-        mock_cursor.fetchall.assert_called_once()
+        with self.assertRaises(DBConnectionError):
+            create_db_manager(
+                db_type="postgresql",
+                db_name="test_db",
+                user="user",
+                password="pass"
+            )
 
-    @patch("mysql.connector.connect")
-    def test_mysql_fetch_results(self, mock_connect):
-        mock_conn = MagicMock()
-        mock_cursor = MagicMock()
-        mock_cursor.fetchall.return_value = [
-            {"column1": "value1"},
-            {"column2": "value2"},
-        ]
-        mock_conn.cursor.return_value = mock_cursor
-        mock_connect.return_value = mock_conn
-        db_manager = DBManager(
-            db_type="mysql", db_name="test_db", user="user", password="password"
+
+class TestMySQLManager(unittest.TestCase):
+    """Test cases for MySQL manager"""
+
+    @patch('sqlalchemy.create_engine')
+    def test_mysql_connection_success(self, mock_engine):
+        mock_connection = MagicMock()
+        mock_engine.return_value.connect.return_value = mock_connection
+
+        with create_db_manager(
+            db_type="mysql",
+            db_name="test_db",
+            user="user",
+            password="pass"
+        ) as db:
+            self.assertIsNotNone(db.client)
+            self.assertIsNotNone(db.db)
+            mock_engine.assert_called_once()
+
+    @patch('sqlalchemy.create_engine')
+    def test_mysql_auth_failure(self, mock_engine):
+        mock_engine.side_effect = sqlalchemy.exc.OperationalError(
+            "statement", "params", "Access denied"
         )
 
-        results = db_manager.fetch_results()
-        self.assertEqual(results, [{"column1": "value1"}, {"column2": "value2"}])
-        mock_cursor.fetchall.assert_called_once()
+        with self.assertRaises(DBConnectionError):
+            create_db_manager(
+                db_type="mysql",
+                db_name="test_db",
+                user="wrong",
+                password="wrong"
+            )
+
+    def test_mysql_missing_credentials(self):
+        with self.assertRaises(DBConfigurationError):
+            create_db_manager(
+                db_type="mysql",
+                db_name="test_db"
+            )
+
+    @patch('sqlalchemy.create_engine')
+    def test_connection_ping(self, mock_engine):
+        mock_connection = MagicMock()
+        mock_engine.return_value.connect.return_value = mock_connection
+
+        with create_db_manager(
+            db_type="mysql",
+            db_name="test_db",
+            user="user",
+            password="pass"
+        ) as db:
+            self.assertTrue(db.ping())
+            mock_connection.execute.assert_called_with("SELECT 1")
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()
